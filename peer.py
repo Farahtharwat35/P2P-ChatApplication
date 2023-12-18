@@ -481,11 +481,7 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode().split()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-      
-    
-        if response[0] == "search-success":
-            print("Printing list...")
-            return response[1]
+        return response[1]
          
 
     
