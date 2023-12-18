@@ -91,6 +91,7 @@ class ClientThread(threading.Thread):
                             # timer thread of the udp server is started
                             response = "login-success"
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            onlinePeers.append(self.username)
                             self.tcpClientSocket.send(response.encode())
                             self.udpServer = UDPServer(self.username, self.tcpClientSocket)
                             self.udpServer.start()
@@ -116,20 +117,19 @@ class ClientThread(threading.Thread):
                         finally:
                             self.lock.release()
                         print(self.ip + ":" + str(self.port) + " is logged out")
+                        onlinePeers.remove(self.username)
                         self.tcpClientSocket.close()
                         self.udpServer.timer.cancel()
                         break
 
-                    elif message[0] == "PRINT":
-                        online_users_cursor = self.db.online_peers.find({"username": 1, "_id": 0})
-
-                        for user in online_users_cursor:
-                              print(user['username'])
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                    else:
-                        self.tcpClientSocket.close()
-                        break
+                elif message[0] == "PRINT":
+                   
+                   response = "List of online users : "
+                   for user in onlinePeers:
+                         response += user['username']
+                   logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                   self.tcpClientSocket.send(response.encode())
+                    
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
                     # checks if an account with the username exists
@@ -214,9 +214,9 @@ print("Registry IP address: " + host)
 print("Registry port number: " + str(port))
 
 # onlinePeers list for online account
-onlinePeers = {}
+onlinePeers = []
 # accounts list for accounts
-accounts = {}
+accounts = []
 # tcpThreads list for online client's thread
 tcpThreads = {}
 
