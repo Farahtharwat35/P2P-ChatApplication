@@ -1,0 +1,424 @@
+-------------------------------------------Select ---------------------------------------------------------
+
+### Blocking I/O:
+
+- **Blocking Read Operation:**
+  - If you try to read from a file, socket, or any I/O resource and there's nothing to read, your program will stop and wait until there is something to read.
+  - For example, if you're waiting for a message on a socket and there's no message, your program pauses until a message arrives.
+
+- **Blocking Write Operation:**
+  - Similarly, if you try to write to an I/O resource but it's not ready to accept data (e.g., a full buffer), your program will stop and wait until it can write the data.
+  - For instance, if you're trying to send a message on a socket, and the socket's buffer is full, your program waits until there's space.
+
+### Non-Blocking I/O:
+
+- **Non-Blocking Read Operation:**
+  - In non-blocking I/O, if there's nothing to read, your program doesn't pause. Instead, it continues doing other things. You check later if there's something to read, and if there is, you read it.
+
+- **Non-Blocking Write Operation:**
+  - Similarly, in non-blocking I/O, if you can't write data immediately, your program doesn't pause. It continues with other tasks. You check later if you can write, and if you can, you write the data.
+
+### `select` and Non-Blocking Sockets:
+
+- **Using `select`:**
+  - The `select` function allows you to efficiently monitor multiple sockets to see which ones are ready for reading or writing.
+  - If a socket is "ready," it means you can perform a read or write operation on that socket without blocking.
+
+- **Non-Blocking Mode:**
+  - Setting a socket to non-blocking mode means that read or write operations won't pause the program. Instead, they may return special values or raise exceptions if the operation can't be performed immediately.
+
+### Example:
+
+```python
+import socket
+import select
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('localhost', 8080))
+server_socket.listen(5)
+
+server_socket.setblocking(0)  # Set the server socket to non-blocking
+
+inputs = [server_socket]
+
+while True:
+    readable, _, _ = select.select(inputs, [], [])
+
+    for s in readable:
+        if s is server_socket:
+            # New connection
+            try:
+                client_socket, client_address = server_socket.accept()
+                client_socket.setblocking(0)  # Set the new socket to non-blocking
+                inputs.append(client_socket)
+                print(f"New connection from {client_address}")
+            except socket.error as e:
+                # Non-blocking accept may raise an exception if no new connection is available
+                pass
+        else:
+            # Existing connection with data to read
+            try:
+                data = s.recv(1024)
+                if not data:
+                    # Connection closed by the client
+                    print(f"Connection with {s.getpeername()} closed.")
+                    inputs.remove(s)
+                else:
+                    # Process the received data
+                    print(f"Received data from {s.getpeername()}: {data.decode()}")
+            except socket.error as e:
+                # Non-blocking recv may raise an exception if no data is available
+                pass
+```
+
+In this example, by setting sockets to non-blocking mode, the program can efficiently check which sockets are ready for reading without blocking the execution. The `select` function helps in managing multiple sockets and determining which ones are ready for I/O operations.
+
+The `select` function determines which sockets are ready for I/O operations by leveraging the underlying operating system's capabilities. It relies on the operating system's notification mechanisms to indicate when specific events occur on the monitored sockets. These events typically include the ability to read from or write to a socket without blocking.
+
+Here's a brief overview of how `select` works:
+
+1. **Monitoring Sockets:**
+   - The `select` function takes three lists of sockets as arguments: `readable`, `writable`, and `exceptional`.
+   - The `select` function then monitors these sockets for specific events.
+
+2. **Blocking Until Events Occur:**
+   - When you call `select`, it blocks (pauses the execution of your program) until at least one of the monitored sockets is ready for the specified event (readability, writability, or exceptional conditions).
+
+3. **Return Values:**
+   - After `select` returns, it populates the three lists (`readable`, `writable`, and `exceptional`) with the sockets that are ready for the corresponding events.
+   - The ready sockets are those on which the specified I/O operation (read or write) can be performed without blocking.
+
+4. **Monitoring Readability, Writability, and Exceptions:**
+   - If a socket is in the `readable` list, it means you can read from it without blocking.
+   - If a socket is in the `writable` list, it means you can write to it without blocking.
+   - If a socket is in the `exceptional` list, it means there is an exceptional condition on that socket (e.g., an error).
+
+5. **Checking Ready Sockets:**
+   - After `select` returns, your program can iterate over the lists of ready sockets and perform the corresponding I/O operations.
+
+In summary, `select` relies on the operating system to notify it when I/O operations can be performed on the monitored sockets without blocking. This notification mechanism is usually more efficient than repeatedly polling the sockets, as it allows the program to wait for events rather than actively checking for them. The specific mechanisms used for notifications vary between operating systems, and `select` abstracts these details, providing a cross-platform solution for efficient I/O multiplexing.
+
+Blocking Mechanism:
+
+The key to select's efficiency lies in its blocking mechanism. When you call select, it typically pauses the execution of your program until at least one of the monitored file descriptors is ready for the specified I/O operation (read or write).
+Waiting for Events:
+
+Instead of actively checking in a loop (busy-waiting), your program relinquishes control to the operating system when it calls select.
+The operating system is responsible for managing the state of the file descriptors you've specified and notifying your program when an event occurs.
+Efficient Resource Usage:
+
+While your program is blocked in the select call, it doesn't consume CPU resources. The operating system efficiently handles the monitoring of file descriptors and wakes up your program only when there's an event.
+Multiplexing:
+
+select allows you to multiplex I/O operations on multiple file descriptors, meaning you can efficiently wait for events on several descriptors without having to dedicate a thread or process to each one.
+
+
+======== Polling :
+
+import socket
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('localhost', 8080))
+server_socket.listen(5)
+
+inputs = [server_socket]
+
+while True:
+    # Busy-waiting loop
+    for s in inputs:
+        if s is server_socket:
+            # Check for new connection
+            try:
+                client_socket, client_address = server_socket.accept()
+                inputs.append(client_socket)
+                print(f"New connection from {client_address}")
+            except socket.error:
+                pass
+        else:
+            # Check for data on existing connections
+            try:
+                data = s.recv(1024)
+                if not data:
+                    # Connection closed by the client
+                    print(f"Connection with {s.getpeername()} closed.")
+                    inputs.remove(s)
+                else:
+                    # Process the received data
+                    print(f"Received data from {s.getpeername()}: {data.decode()}")
+            except socket.error:
+                pass
+
+    # Introduce a small delay to avoid busy-waiting consuming excessive CPU
+    # This is not an ideal solution and is used here just to illustrate the point
+    import time
+    time.sleep(0.1)
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+----------------------------------------------------Poll()---------------------------------------------------------------------------------------------------------------------------------------
+`select` and polling are both techniques used in programming to handle multiple I/O operations concurrently. However, they have some key differences in terms of implementation and usage.
+
+### `select`:
+
+1. **Mechanism:**
+   - `select` is a system call provided by most operating systems.
+   - It uses a set of three lists (readable, writable, and exceptional) to monitor multiple file descriptors (like sockets) for I/O events.
+
+2. **Blocking:**
+   - When you call `select`, it typically blocks (pauses the program's execution) until at least one of the monitored file descriptors is ready for the specified I/O operation.
+   - The blocking behavior allows the program to efficiently wait for events without actively checking for them.
+
+3. **Scalability:**
+   - `select` may become less efficient as the number of monitored file descriptors increases. It has limitations on the maximum file descriptor value it can handle, and its performance can degrade in scenarios with a large number of file descriptors.
+
+### Polling:
+
+1. **Mechanism:**
+   - Polling is a programming technique where the program actively checks multiple file descriptors for events.
+   - In Unix-like systems, the `poll` system call is commonly used for polling.
+
+2. **Blocking:**
+   - Unlike `select`, which blocks until an event occurs, polling allows for more flexibility. You can set a timeout value or choose to poll non-blocking file descriptors.
+
+3. **Efficiency and Scalability:**
+   - Polling can be more efficient than `select` in scenarios with a large number of file descriptors, as it doesn't have the same limitations as `select`.
+   - It scales better because it doesn't require maintaining three lists for monitoring.
+
+### Differences:
+
+1. **API and Usage:**
+   - The API and usage of `select` and polling are different. `select` requires managing three lists, while polling typically involves working with a single structure, such as a `pollfd` array in the case of `poll`.
+
+2. **Blocking Behavior:**
+   - `select` is inherently blocking, and it waits for events to occur. Polling can be either blocking or non-blocking based on the program's design.
+
+3. **Scalability:**
+   - Polling is often more scalable and efficient than `select` in scenarios with a large number of file descriptors.
+
+4. **Availability:**
+   - `select` is widely available on various operating systems. Polling is also common and widely supported, especially in Unix-like systems.
+
+5. **Ease of Use:**
+   - `select` can be easier to use for simpler scenarios with fewer file descriptors. Polling may offer more flexibility but could be seen as more complex due to its array-based structure.
+
+In summary, the choice between `select` and polling depends on the specific requirements of the program, including the number of file descriptors to be monitored and the desired blocking behavior. Polling is often preferred for larger-scale applications with many file descriptors, while `select` may be sufficient for simpler scenarios.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+-------------------------File descriptors----------------------------------------------------------------------
+In computing, a file descriptor (often abbreviated as "fd") is a unique identifier or index that refers to an open file or input/output resource. File descriptors are an abstraction used by operating systems to represent files, sockets, pipes, and other I/O resources, allowing programs to interact with them.
+
+Here are key points about file descriptors:
+
+1. **Unique Identifier:**
+   - Each open file or I/O resource in a process is assigned a unique file descriptor.
+   - File descriptors are integers, and they are used by the operating system to keep track of open files and other I/O resources associated with a process.
+
+2. **Standard File Descriptors:**
+   - In Unix-like operating systems, three standard file descriptors are associated with every process by default:
+     - **0 (stdin):** Standard input, representing input from the keyboard.
+     - **1 (stdout):** Standard output, representing output to the screen.
+     - **2 (stderr):** Standard error, representing error output.
+
+3. **Opening and Closing Files:**
+   - When a program opens a file or creates a socket, the operating system returns a file descriptor that uniquely identifies that resource.
+   - The program can use this file descriptor to perform read, write, or other operations on the resource.
+
+4. **I/O Operations:**
+   - File descriptors are crucial for I/O operations. Programs use file descriptors to read from or write to files, sockets, pipes, and other I/O resources.
+
+5. **Closing File Descriptors:**
+   - It's important to close file descriptors when they are no longer needed. This frees up system resources and helps prevent resource leaks.
+   - Closing a file descriptor does not necessarily mean closing the underlying file or resource; it just releases the association between the file descriptor and the resource.
+
+6. **Passing File Descriptors:**
+   - In inter-process communication, file descriptors can be passed between processes to share open files or sockets. This is often done using system calls like `fork`, `pipe`, or socket-related functions.
+
+7. **Manipulating File Descriptors:**
+   - System calls like `read`, `write`, `close`, `open`, and others operate on file descriptors.
+   - Advanced operations, such as redirecting standard I/O, involve manipulating file descriptors.
+
+**Example (in C):**
+```c
+#include <unistd.h>
+#include <fcntl.h>
+
+int main() {
+    // Open a file and get a file descriptor
+    int fd = open("example.txt", O_RDONLY);
+
+    // Check if opening the file was successful
+    if (fd != -1) {
+        // Perform read or write operations using the file descriptor
+
+        // Close the file descriptor when done
+        close(fd);
+    }
+
+    return 0;
+}
+```
+
+In this example, `open` returns a file descriptor that is used for subsequent I/O operations on the file. The `close` system call is used to release the file descriptor when it is no longer needed.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+-----------------------------Peer Server---------------------------------------------------------------------------------------------------------------------------------------
+When a client sends a connection request to the server, the data to be read from the server's listening socket is the information associated with the incoming connection. In the context of a TCP server, this information typically includes details about the client, such as its IP address and port.
+
+Here's a breakdown of what happens:
+
+1. **Client Sends Connection Request:**
+   - A client initiates a connection to the server by sending a TCP connection request.
+
+2. **Listening Socket Becomes Readable:**
+   - The server's listening socket becomes "readable" because there is an incoming connection request.
+
+3. **Accepting the Connection:**
+   - The server calls the `accept` method on the listening socket to accept the incoming connection.
+
+   ```python
+   connected, addr = s.accept()
+   ```
+
+   - The `accept` method returns a new socket (`connected`) representing the specific connection and the address of the client (`addr`).
+
+4. **Address Information:**
+   - The `addr` variable contains information about the client, typically in the form of a tuple, such as `(client_ip, client_port)`.
+
+5. **Further Handling:**
+   - The server can use the information obtained from the client address for various purposes:
+     - Logging the connection details.
+     - Keeping track of connected clients.
+     - Applying access control based on client information.
+     - etc.
+
+6. **Non-blocking Mode and Monitoring:**
+   - The newly accepted socket (`connected`) is set to non-blocking mode, allowing the server to handle multiple connections simultaneously.
+
+   ```python
+   connected.setblocking(0)
+   ```
+
+   - The newly accepted socket is added to the list of sockets to be monitored (`inputs`), so it can be checked for further events, such as incoming data.
+
+   ```python
+   inputs.append(connected)
+   ```
+
+In summary, when the server's listening socket becomes readable due to an incoming connection request, the server accepts the connection, retrieves information about the client (such as IP and port), and takes further actions, such as setting the socket to non-blocking mode and adding it to the list of sockets for monitoring. The actual data sent by the client (e.g., an application-level request) will be read from the `connected` socket later when the server checks for readable sockets during subsequent iterations of the event loop.
+
+Yes, that's correct. In a typical TCP server implementation, when a client connects, the `accept()` method is used to accept the incoming connection, and it returns a new socket specifically dedicated to that connection. This new socket is distinct from the server's listening socket.
+
+Here's a breakdown of the process:
+
+1. **Listening Socket:**
+   - The server creates a listening socket to wait for incoming connections.
+
+   ```python
+   server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   server_socket.bind(('localhost', 8080))
+   server_socket.listen(4)
+   ```
+
+2. **Accepting Connections:**
+   - When a client connects, the server calls `accept()` on the listening socket.
+
+   ```python
+   connected, addr = server_socket.accept()
+   ```
+
+3. **New Socket for the Connection:**
+   - The `accept()` method returns a new socket (`connected`) that represents the specific connection to the client.
+
+4. **Handling Multiple Connections:**
+   - If multiple clients connect simultaneously or at different times, the `accept()` method will be called for each connection, resulting in a new socket for each client.
+
+   ```python
+   connected1, addr1 = server_socket.accept()  # Socket for client 1
+   connected2, addr2 = server_socket.accept()  # Socket for client 2
+   # ...
+   ```
+
+5. **Non-blocking Mode and Monitoring:**
+   - Each new socket representing a connection can be set to non-blocking mode and added to the list of sockets to be monitored. This allows the server to handle multiple connections simultaneously.
+
+   ```python
+   connected1.setblocking(0)
+   connected2.setblocking(0)
+   inputs = [server_socket, connected1, connected2, ...]
+   ```
+
+Each new socket (`connected`) corresponds to an individual client connection, and the server can manage these connections concurrently. This is a common pattern in server programming, especially in scenarios where the server needs to handle multiple clients simultaneously, such as in a chat server, a web server, or any application with multiple clients connecting at the same time.
+
+========================================== Why added to inputs ?
+Adding the newly accepted socket to the `inputs` list is part of the mechanism used for event-driven programming and handling multiple simultaneous connections efficiently. The `inputs` list is then used with the `select` function to monitor multiple sockets for events without the need for active polling.
+
+Here's a breakdown of why the newly accepted socket is added to `inputs`:
+
+1. **Event-Driven Programming:**
+   - Event-driven programming is a paradigm where the flow of the program is determined by events such as user actions, sensor outputs, or, in this case, incoming data on sockets.
+
+2. **`select` Function:**
+   - The `select` function allows the program to efficiently wait for events on multiple sockets without actively checking each socket in a loop.
+
+   ```python
+   readable, _, _ = select.select(inputs, [], [])
+   ```
+
+3. **Monitoring Multiple Sockets:**
+   - The `inputs` list contains all the sockets that the server is interested in monitoring for events, including the server's listening socket and individual connection sockets.
+
+   ```python
+   inputs = [server_socket, connected1, connected2, ...]
+   ```
+
+4. **Why Include Listening Socket:**
+   - Including the server's listening socket in the `inputs` list allows the server to detect when there is an incoming connection request. When the listening socket becomes readable, it indicates that there is an incoming connection.
+
+5. **Why Include Connection Sockets:**
+   - Including individual connection sockets in the `inputs` list allows the server to monitor those sockets for incoming data. When a connection socket becomes readable, it indicates that there is data available to be read from that specific connection.
+
+6. **Efficient Waiting with `select`:**
+   - The `select` function efficiently waits for events on any of the sockets in the `inputs` list. It returns lists of sockets that are ready for reading, writing, or have exceptional conditions.
+
+7. **Handling Events:**
+   - After `select` returns, the server can iterate over the lists of readable, writable, or exceptional sockets and take appropriate actions.
+
+By including both the listening socket and individual connection sockets in the `inputs` list, the server can efficiently wait for events related to incoming connections and incoming data on established connections, all in a non-blocking manner. This is crucial for servers that need to handle multiple clients concurrently without active polling or blocking on each individual socket.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------Peer chatting-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Yes, that's correct. The code you provided checks if isChatRequested is equal to 0 before updating the connectedPeerSocket and connectedPeerIP attributes. If isChatRequested is 0, it implies that the user is not currently in an active chat. Therefore, the code updates these attributes with information about the newly connected peer.
+
+This design choice suggests that the user can only be actively chatting with one peer at a time. If a user is already in a chat (isChatRequested is 1), the code would not update the connectedPeerSocket and connectedPeerIP attributes for a new connection.
+
+If the intention is to allow a user to chat with multiple peers simultaneously, you would need to modify the code to handle multiple active chats. This might involve keeping a list or dictionary of connected peers and their respective sockets and IP addresses. The decision would depend on the specific requirements and design of your peer-to-peer communication system.
+
+Potential Issues:
+
+The code does not check for errors that might occur during the recv() operation, such as the peer disconnecting. It's generally a good practice to handle these cases to ensure robustness.
+
+Condition Check:
+
+The condition checks whether the socket s is not the same as the socket representing the peer the server is currently chatting with (self.connectedPeerSocket).
+It also checks whether the server is already in an active chat (self.isChatRequested == 1).
+Handling a Busy Scenario:
+
+If the condition is true, it means that the server is currently chatting with someone else, and it received data from a different peer (a peer that is not the current chat partner).
+In this case, the server sends a "BUSY" message to the peer that sent the chat request.
+Additionally, the code removes the socket (s) from the inputs list.
+Reason for Removing the Socket:
+
+The removal of the socket from the inputs list is likely done to stop monitoring this particular socket for readability.
+When a socket is removed from the inputs list, the server will no longer check it for incoming data during the next iteration of the loop.
+This is a way to manage the state of the server and avoid unnecessary processing for sockets that are not relevant to the current chat.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
