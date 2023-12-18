@@ -123,13 +123,12 @@ class ClientThread(threading.Thread):
                         break
 
                 elif message[0] == "PRINT":
-                   
-                   response = "List of online users : "
-                   for user in onlinePeers:
-                         response += user['username']
-                   logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                   self.tcpClientSocket.send(response.encode())
-                    
+                    response = "List of online users: " + ', '.join(str(user) for user in onlinePeers)
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                    self.tcpClientSocket.send(response.encode())
+
+
+
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
                     # checks if an account with the username exists
@@ -168,7 +167,7 @@ class UDPServer(threading.Thread):
         threading.Thread.__init__(self)
         self.username = username
         # timer thread for the udp server is initialized
-        self.timer = threading.Timer(3, self.waitHelloMessage)
+        self.timer = threading.Timer(80, self.waitHelloMessage)
         self.tcpClientSocket = clientSocket
     
 

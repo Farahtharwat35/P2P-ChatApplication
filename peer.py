@@ -481,12 +481,7 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode().split()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-        return response[1]
-         
-
-    
-
-   
+        print(response)
 
     # function for sending hello message
     # a timer thread is used to send hello messages to udp socket of registry
@@ -494,7 +489,7 @@ class peerMain:
         message = "HELLO " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
-        self.timer = threading.Timer(1, self.sendHelloMessage)
+        self.timer = threading.Timer(80, self.sendHelloMessage)
         self.timer.start()
 
 # peer is started
