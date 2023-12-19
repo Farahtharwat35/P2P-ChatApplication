@@ -1,1 +1,3 @@
-Notes.txt
+Notes
+*.log
+
