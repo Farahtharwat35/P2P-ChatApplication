@@ -30,7 +30,7 @@ class DB:
 
     # checks if an account with the username online
     def is_account_online(self, username):
-        if self.db.online_peers.count_documents({"username": username}):
+        if self.db.online_peers.find({"username": username}).count() > 0:
             return True
         else:
             return False
@@ -42,7 +42,7 @@ class DB:
             "ip": ip,
             "port": port
         }
-        self.db.online_peers.insert_one(online_peer)
+        self.db.online_peers.insert(online_peer)
 
     # logs out the user
     def user_logout(self, username):
