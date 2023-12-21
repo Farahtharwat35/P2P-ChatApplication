@@ -6345,3 +6345,6 @@ INFO:root:Received from 192.168.1.18 -> L i s t   o f   o n l i n e   u s e r s 
 INFO:root:Send to 192.168.1.18:15600 -> SEARCH farooha
 INFO:root:Received from 192.168.1.18 -> search-user-not-online
 INFO:root:Send to 192.168.1.18:15600 -> LOGOUT farah
+INFO:root:Send to 192.168.1.3:15600 -> JOIN YS $2b$12$U4wMavewMISz1NQvGSDzTeuLRByo70FrIzq7hI6kDKb6asBcQ7cSO
+INFO:root:Received from 192.168.1.3 -> join-success
+INFO:root:Send to 192.168.1.3:15600 -> LOGIN YS NS 15600
