@@ -9,7 +9,7 @@ import threading
 import select
 import logging
 import db
-
+import bcrypt
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
@@ -74,10 +74,11 @@ class ClientThread(threading.Thread):
                     # if an account with the username exists and not online
                     else:
                         # retrieves the account's password, and checks if the one entered by the user is correct
-                        retrievedPass = db.get_password(message[1])
+                        retrieved_hashed_pass = db.get_password(message[1])
                         # if password is correct, then peer's thread is added to threads list
                         # peer is added to db with its username, port number, and ip address
-                        if retrievedPass == message[2]:
+                        # if retrievedPass == message[2]:
+                        if bcrypt.checkpw(message[2].encode('utf-8'), retrieved_hashed_pass.encode('utf-8')):
                             self.username = message[1]
                             self.lock.acquire()
                             try:
@@ -185,12 +186,12 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(3, self.waitHelloMessage)
+        self.timer = threading.Timer(80, self.waitHelloMessage)
         self.timer.start()
 
 
 # tcp and udp server port initializations
-print("Registy started...")
+print("\033[31mRegisty started...\033[0m")        
 port = 15600
 portUDP = 15500
 
@@ -209,8 +210,8 @@ except gaierror:
     host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
 
-print("Registry IP address: " + host)
-print("Registry port number: " + str(port))
+print("\033[96mRegistry IP address:\033[0m " + host)
+print("\033[96mRegistry port number: \033[0m" + str(port))
 
 # onlinePeers list for online account
 onlinePeers = []
@@ -235,7 +236,7 @@ logging.basicConfig(filename="registry.log", level=logging.INFO)
 # as long as at least a socket exists to listen registry runs
 while inputs:
 
-    print("Listening for incoming connections...")
+    print("\033[92mListening for incoming connections...\033[0m")
     # monitors for the incoming connections
     readable, writable, exceptional = select.select(inputs, [], [])
     for s in readable:
@@ -262,4 +263,3 @@ while inputs:
                     
 # registry tcp socket is closed
 tcpSocket.close()
-

@@ -3,15 +3,62 @@
     ##  Each peer has a client and a server side that runs on different threads
     ##  150114822 - Eren Ulaş
 '''
-
+import msvcrt
 from socket import *
 import threading
-import time
 import select
 import logging
 import bcrypt
+import getpass
+import pwinput
+import stdiomask
+import getpass_ak
 
+import sys
 
+# def getpass_asterisks(prompt="Password: "):
+#     password = ""
+#     if sys.platform == "win32":
+#         import msvcrt
+#         print(prompt, end='', flush=True)
+#         while True:
+#             char = msvcrt.getch().decode('utf-8')
+#             if char == '\r' or char == '\n':
+#                 print('')
+#                 break
+#             else:
+#                 password += char
+#                 print('*', end='', flush=True)
+
+    # elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+    #     import termios
+    #     try:
+    #         print(prompt, end='', flush=True)
+    #         fd = sys.stdin.fileno()
+    #         old_settings = termios.tcgetattr(fd)
+    #         try:
+    #             tty.setraw(fd)
+    #             while True:
+    #                 char = sys.stdin.read(1)
+    #                 if char == '\r' or char == '\n':
+    #                     print('')
+    #                     break
+    #                 else:
+    #                     password += char
+    #                     print('*', end='', flush=True)
+    #         finally:
+    #             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    #     except ImportError:
+    #         # Fallback to getpass if termios or tty is not available
+    #         import getpass
+    #         password = getpass.getpass(prompt)
+
+    # else:
+    #     # Fallback to getpass if not on Windows, Linux, or macOS
+    #     import getpass
+    #     password = getpass.getpass(prompt)
+    #
+    # return password
 
 # Server side of peer
 class PeerServer(threading.Thread):
@@ -39,18 +86,18 @@ class PeerServer(threading.Thread):
         self.isOnline = True
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
-    
+
 
     # main method of the peer server thread
     def run(self):
 
-        #print("Peer server started...")    
+        #print("Peer server started...")
 
         # gets the ip address of this peer
         # first checks to get it for windows devices
         # if the device that runs this application is not windows
         # it checks to get it for macos devices
-        hostname=gethostname() #function in socket lib 
+        hostname=gethostname() #function in socket lib
         try:
             self.peerServerHostname=gethostbyname(hostname)
         except gaierror:  #error that the ip address entered is incorrect
@@ -71,7 +118,7 @@ class PeerServer(threading.Thread):
                 readable, writable, exceptional = select.select(inputs, [], [])
                 # If a server waits to be connected enters here
                 for s in readable:
-                    # if the socket that is receiving the connection is 
+                    # if the socket that is receiving the connection is
                     # the tcp socket of the peer's server, enters here
                     if s is self.tcpServerSocket:
                         # accepts the connection, and adds its connection socket to the inputs list
@@ -81,7 +128,7 @@ class PeerServer(threading.Thread):
                         inputs.append(connected)
                         # if the user is not chatting, then the ip and the socket of
                         # this peer is assigned to server variables
-                        if self.isChatRequested == 0:     
+                        if self.isChatRequested == 0:
                             print(self.username + " is connected from " + str(addr))
                             self.connectedPeerSocket = connected
                             self.connectedPeerIP = addr[0]
@@ -113,7 +160,7 @@ class PeerServer(threading.Thread):
                             # if the socket that we received the data does not belong to the peer that we are chatting with
                             # and if the user is already chatting with someone else(isChatRequested = 1), then enters here
                             elif s is not self.connectedPeerSocket and self.isChatRequested == 1:
-                                # sends a busy message to the peer that sends a chat request when this peer is 
+                                # sends a busy message to the peer that sends a chat request when this peer is
                                 # already chatting with someone else
                                 message = "BUSY"
                                 s.send(message.encode())
@@ -126,7 +173,7 @@ class PeerServer(threading.Thread):
                         elif messageReceived == "REJECT":
                             self.isChatRequested = 0
                             inputs.remove(s)
-                        # if a message is received, and if this is not a quit message ':q' and 
+                        # if a message is received, and if this is not a quit message ':q' and
                         # if it is not an empty message, show this message to the user
                         elif messageReceived[:2] != ":q" and len(messageReceived)!= 0:
                             print(self.chattingClientName + ": " + messageReceived)
@@ -154,7 +201,7 @@ class PeerServer(threading.Thread):
                 logging.error("OSError: {0}".format(oErr))
             except ValueError as vErr:
                 logging.error("ValueError: {0}".format(vErr))
-            
+
 
 # Client side of peer
 class PeerClient(threading.Thread):
@@ -233,7 +280,7 @@ class PeerClient(threading.Thread):
                     self.responseReceived = None
                     self.tcpClientSocket.close()
             # if the request is rejected, then changes the server status, sends a reject message to the connected peer's server
-            # logs the message and then the socket is closed       
+            # logs the message and then the socket is closed
             elif self.responseReceived[0] == "REJECT":
                 self.peerServer.isChatRequested = 0
                 print("client of requester is closing...")
@@ -274,7 +321,7 @@ class PeerClient(threading.Thread):
                     logging.info("Send to " + self.ipToConnect + ":" + str(self.portToConnect) + " -> :q")
                 self.responseReceived = None
                 self.tcpClientSocket.close()
-                
+
 
 # main process of the peer
 class peerMain:
@@ -305,7 +352,7 @@ class peerMain:
         self.peerClient = None
         # timer initialization
         self.timer = None
-        
+
         choice = "0"
         # log file initialization
         logging.basicConfig(filename="peer.log", level=logging.INFO)
@@ -315,18 +362,21 @@ class peerMain:
             choice = input("\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\033[0m\n")
             # if choice ==1, creates an account with the username
             # and password entered by the user
-            if choice =="1":
-                username = input("username: ")
-                password = input("password: ")
+
+            if choice == "1":
+                username = input("Username: ")
+                password = pwinput.pwinput(prompt="Enter your password: ", mask="*")
+                #password = stdiomask.getpass(prompt="Enter password : ")
                 self.createAccount(username, password)
+
             # if choice ==2 and user is not logged in, asks for the username
             # and the password to login
             elif choice =="2" and not self.isOnline:
                 username = input("username: ")
-                password = input("password: ")
+                password = input("Passowrd :")
                 # asks for the port number for server's tcp socket
                 #peerServerPort = int(input("Enter a port number for peer server: "))
-                
+
                 status = self.login(username, password, 15600)
                 # is user logs in successfully, peer variables are set
                 if status ==1:
@@ -445,7 +495,7 @@ class peerMain:
         elif response == "login-wrong-password":
             print("\033[93mWrong password...\033[0m")
             return 3
-    
+
     # logout function
     def logout(self, option):
         # a logout message is composed and sent to registry
@@ -457,7 +507,7 @@ class peerMain:
             message = "LOGOUT"
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        
+
 
     # function for searching an online user
     def searchUser(self, username):
@@ -478,10 +528,10 @@ class peerMain:
         elif response[0] == "search-user-not-found":
             print(username + " \033[93mis not found\033[0m")
             return None
-    
+
 
     def print_online_users(self):
-        message = "PRINT" 
+        message = "PRINT"
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
