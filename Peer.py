@@ -6,7 +6,7 @@
 
 import socket
 import threading
-import time
+import os
 import select
 import logging
 import bcrypt
@@ -326,7 +326,7 @@ class peerMain:
                 username = input("username: ")
                 password = input("password: ")
                 status = self.login(username, password, 15600)
-                peerServerPort = self.find_available_port()
+                peerServerPort = self.find_available_port(socket.gethostbyname(socket.gethostname()))
                 print("Peer server port is : ", peerServerPort)
                 # is user logs in successfully, peer variables are set
                 if status == 1:
@@ -367,7 +367,9 @@ class peerMain:
 
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
-                self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                print(response)
+
 
             elif choice == "8" and self.isOnline:
                 room_name = input("room name: ")
@@ -573,21 +575,23 @@ class peerMain:
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
 
-    def is_port_available(self, port):
+    def is_port_available(self,ip_no,port,udp=False):
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(('localhost', port))
-            return True
+            if udp :
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.bind((ip_no, port))
+                return True
+            else :
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind((ip_no, port))
+                return True
         except socket.error:
             return False
-    def find_available_port(self, start_port=49152, end_port=65535):
+    def find_available_port(self,ip_no,start_port=60000, end_port=65535,udp=False):
         for port in range(start_port, end_port + 1):
-            if self.is_port_available(port):
+            if self.is_port_available(ip_no,port,udp):
                 return port
         print("No ports available!")
         return None  # If no available port is found in the specified range
-
-
 
 main=peerMain()

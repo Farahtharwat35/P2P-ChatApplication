@@ -137,10 +137,9 @@ class ClientThread(threading.Thread):
                     print(response)
 
                 elif message[0] == "CREATE":
-                    response_db = db.savechatroom(message[1],message[2],message[3],message[4])
-                    response = "CREATED"
+                    response_db = db.save_chatroom(message[1],message[2],message[3],message[4])
                     logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
-                    self.tcpClientSocket.send(response.encode())
+                    self.tcpClientSocket.send(response_db.encode())
 
                 elif message[0] == "JOIN-ROOM":
                     exists,response_db =db.is_room_exits(message[1],message[2],message[3],message[4])
@@ -239,7 +238,7 @@ db = db.DB()
 # first checks to get it for windows devices
 # if the device that runs this application is not windows
 # it checks to get it for macos devices
-hostname = socket.gethostname()
+hostname = socket.gethostbyname(socket.gethostname())
 try:
     host = socket.gethostbyname(hostname)
 except socket.gaierror:
