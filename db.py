@@ -88,15 +88,18 @@ class DB:
             "Port_number": port_number
         }
 
-        try:
-
-            self.db.chatrooms.update_one(
-                {"room_name": room_name},
-                {'$addToSet': {'members': member_data}}
-            )
-            print(f"Member '{username}' joined the chatroom '{room_name}' successfully.")
-        except Exception as e:
-            print(f"Error adding member '{username}' to chatroom '{room_name}': {e}")
+        # Check if the user is not already a member of the chatroom
+        if not self.is_member_in_room(room_name, username):
+            try:
+                self.db.chatrooms.update_one(
+                    {"room_name": room_name},
+                    {'$addToSet': {'members': member_data}}
+                )
+                print(f"Member '{username}' joined the chatroom '{room_name}' successfully.")
+            except Exception as e:
+                print(f"Error adding member '{username}' to chatroom '{room_name}': {e}")
+        else:
+            print(f"Member '{username}' is already in the chatroom '{room_name}'.")
 
     def is_room_exits(self, room_name):
         try:
