@@ -374,11 +374,11 @@ class peerMain:
 
             elif choice == "8" and self.isOnline:
                 room_name = input("room name: ")
-                self.joinRoom(room_name)
+                self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
                 
             elif choice == "9" and self.isOnline :
                 room_name = input("room name: ")
-                self.leaveRoom(room_name)
+                self.leaveRoom(self.loginCredentials[0],room_name)
 
 
             elif choice == "10" and self.isOnline:
@@ -504,6 +504,7 @@ class peerMain:
             print(username + " \033[93mis not found\033[0m")
             return None
 
+    # ----------------------TO BE UPDATED--------------------------------------
     def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_port_number):
         message = "CREATE " + room_name + " "  
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
@@ -516,8 +517,8 @@ class peerMain:
             print("not created")
 
 
-
-    def joinRoom(self, room_name):
+    #----------------------TO BE UPDATED--------------------------------------
+    def joinRoom(self, room_name, username, ip_address, port_number):
         message = "JOIN-ROOM "+ room_name + " " + self.loginCredentials[0]+" "+self.peerServer.peerServerHostname+" "+self.peerServerPort
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
@@ -532,10 +533,9 @@ class peerMain:
         elif response == "MEMBER-IN-ROOM" :
             print("\033[93mMember already in room \033[0m")
             return 1
-            
 
-            
-    def leaveRoom(self, roomname):
+    # ----------------------TO BE UPDATED--------------------------------------
+    def leaveRoom(self, username,room_name):
         message = "LEAVE "+self.loginCredentials[0]+" "+roomname
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
