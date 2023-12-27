@@ -4,7 +4,7 @@
     ##  150114822 - Eren Ulaş
 '''
 
-from socket import *
+import socket
 import threading
 import time
 import select
@@ -22,7 +22,7 @@ class PeerServer(threading.Thread):
         # keeps the username of the peer
         self.username = username
         # tcp socket for peer server
-        self.tcpServerSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # port number of the peer server
         self.peerServerPort = peerServerPort
         # if 1, then user is already chatting with someone
@@ -48,10 +48,10 @@ class PeerServer(threading.Thread):
         # first checks to get it for windows devices
         # if the device that runs this application is not windows
         # it checks to get it for macos devices
-        hostname = gethostname()
+        hostname = socket.gethostname()
         try:
-            self.peerServerHostname = gethostbyname(hostname)
-        except gaierror:
+            self.peerServerHostname = socket.gethostbyname(hostname)
+        except socket.gaierror:
             import netifaces as ni
             self.peerServerHostname = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
@@ -166,7 +166,7 @@ class PeerClient(threading.Thread):
         # keeps the port number that this client should connect
         self.portToConnect = portToConnect
         # client side tcp socket initialization
-        self.tcpClientSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # keeps the server of this client
         self.peerServer = peerServer
         # keeps the phrase that is used when creating the client
@@ -286,10 +286,10 @@ class peerMain:
         # port number of the registry
         self.registryPort = 15600
         # tcp socket connection to registry
-        self.tcpClientSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpClientSocket.connect((self.registryName, self.registryPort))
         # initializes udp socket which is used to send hello messages
-        self.udpClientSocket = socket(AF_INET, SOCK_DGRAM)
+        self.udpClientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         # udp port of the registry
         self.registryUDPPort = 15500
         # login info of the peer

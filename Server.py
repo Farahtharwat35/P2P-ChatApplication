@@ -3,7 +3,7 @@
     ##  150114822 - Eren Ulaş
 '''
 
-from socket import *
+import socket
 import threading
 import select
 import logging
@@ -256,8 +256,8 @@ accounts = []
 tcpThreads = {}
 
 # tcp and udp socket initializations
-tcpSocket = socket(AF_INET, SOCK_STREAM)
-udpSocket = socket(AF_INET, SOCK_DGRAM)
+tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 tcpSocket.bind((host, port))
 udpSocket.bind((host, portUDP))
 tcpSocket.listen(5)
