@@ -71,15 +71,14 @@ class DB:
         # Check if the room name already exists
         existing_room = self.db.chatrooms.find_one({"room_name": room_name})
         if existing_room:
-            print(f"Error: Chatroom with name '{room_name}' already exists.")
-            return
+            return (f"Error: Chatroom with name '{room_name}' already exists.")
 
         try:
             # If the room name doesn't exist, insert the chatroom data
             self.db.chatrooms.insert_one(chatroom_data)
-            print(f"Chatroom '{room_name}' created successfully.")
+            return (f"Chatroom '{room_name}' created successfully.")
         except Exception as e:
-            print(f"Error creating chatroom '{room_name}': {e}")
+            return (f"Error creating chatroom '{room_name}': {e}")
 
     def add_member(self, room_name, username, ip_address, port_number):
         member_data = {

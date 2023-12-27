@@ -319,16 +319,15 @@ class peerMain:
             if choice == "1":
                 username = input("username: ")
                 password = input("password: ")
-
                 self.createAccount(username, password)
             # if choice is 2 and user is not logged in, asks for the username
             # and the password to login
             elif choice == "2" and not self.isOnline:
                 username = input("username: ")
                 password = input("password: ")
+                status = self.login(username, password, 15600)
                 peerServerPort = self.find_available_port()
                 print("Peer server port is : ", peerServerPort)
-                status = self.login(username, password, peerServerPort)
                 # is user logs in successfully, peer variables are set
                 if status == 1:
                     self.isOnline = True
@@ -504,20 +503,20 @@ class peerMain:
 
     # ----------------------UPDATED--------------------------------------
     def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_port_number):
-        message = "CREATE " + room_name + " " + creator_username +" "+ creator_ip_address + " " + creator_port_number
+        message = "CREATE " + room_name + " " + creator_username +" "+ str(creator_ip_address) + " " + str(creator_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         if response == "CREATED":
-            print(" CREATED DONE ")
+            print("CHATROOM HAS BEEN CREATED")
         else:
-            print("not created")
+            print("CHATROOM HAS NOT BEEN CREATED")
 
 
     #----------------------TO BE UPDATED--------------------------------------
     def joinRoom(self, room_name, username, ip_address, port_number):
-        message = "JOIN-ROOM "+ room_name + " " + username+" "+ip_address+" "+port_number
+        message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
@@ -532,7 +531,7 @@ class peerMain:
             print("\033[93mMember already in room \033[0m")
             return 1
 
-    # ----------------------TO BE UPDATED--------------------------------------
+  #todo :: leave room to be handled with list of rooms
     def leaveRoom(self, username,room_name):
         message = "LEAVE "+ username + " " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
@@ -571,7 +570,7 @@ class peerMain:
         message = "HELLO " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
-        self.timer = threading.Timer(1, self.sendHelloMessage)
+        self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
 
     def is_port_available(self, port):

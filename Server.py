@@ -137,34 +137,37 @@ class ClientThread(threading.Thread):
                     print(response)
 
                 elif message[0] == "CREATE":
-                    db.savechatroom(message[1],message[2],message[3],message[4])
+                    response_db = db.savechatroom(message[1],message[2],message[3],message[4])
                     response = "CREATED"
-                    logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response)
+                    logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
                     self.tcpClientSocket.send(response.encode())
 
                 elif message[0] == "JOIN-ROOM":
-                    exists,response =db.is_room_exits(message[1],message[2],message[3],message[4])
+                    exists,response_db =db.is_room_exits(message[1],message[2],message[3],message[4])
                     if not exists:
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                        response = "JOIN-ROOM-FAIL"
                         self.tcpClientSocket.send(response.encode())
                     # login-online is sent to peer,
                     # if an account with the username already online
                     elif db.is_member_inroom(message[1], message[2]):
                         response = "MEMBER-IN-ROOM"
                         print("Member already in room..")
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response.encode())
 
                     else:
-                        response = db.add_member(message[1],message[2],message[3],message[4])
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        response_db = db.add_member(message[1],message[2],message[3],message[4])
+                        response = "MEMBER-JOINED"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response.encode())
 
 
-
+#todo :: leave room to be handled with list of rooms
                 elif message[0] == "LEAVE":
-                    response = db.LEAVE_ROOM(message[1])
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                    response_db = db.LEAVE_ROOM(message[1],message[2])
+                    response = ""
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                     self.tcpClientSocket.send(response.encode())
 
                 #   SEARCH  #
@@ -220,7 +223,7 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(80, self.waitHelloMessage)
+        self.timer = threading.Timer(30, self.waitHelloMessage)
         self.timer.start()
 
 
@@ -236,10 +239,10 @@ db = db.DB()
 # first checks to get it for windows devices
 # if the device that runs this application is not windows
 # it checks to get it for macos devices
-hostname = gethostname()
+hostname = socket.gethostname()
 try:
-    host = gethostbyname(hostname)
-except gaierror:
+    host = socket.gethostbyname(hostname)
+except socket.gaierror:
     import netifaces as ni
 
     host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
