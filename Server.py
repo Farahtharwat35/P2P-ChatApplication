@@ -142,17 +142,16 @@ class ClientThread(threading.Thread):
                     self.tcpClientSocket.send(response_db.encode())
 
                 elif message[0] == "JOIN-ROOM":
-                    exists,response_db =db.is_room_exits(message[1],message[2],message[3],message[4])
+                    exists,response_db =db.is_room_exits(message[1])
                     if not exists:
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                         response = "JOIN-ROOM-FAIL"
-                        self.tcpClientSocket.send(response.encode())
+                        self.tcpClientSocket.send(response_db.encode())
                     # login-online is sent to peer,
                     # if an account with the username already online
                     elif db.is_member_inroom(message[1], message[2]):
-                        response = "MEMBER-IN-ROOM"
-                        print("Member already in room..")
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                        response = "Member already in room.."
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
 
                     else:
@@ -238,7 +237,7 @@ db = db.DB()
 # first checks to get it for windows devices
 # if the device that runs this application is not windows
 # it checks to get it for macos devices
-hostname = socket.gethostbyname(socket.gethostname())
+hostname = socket.gethostname()
 try:
     host = socket.gethostbyname(hostname)
 except socket.gaierror:
@@ -263,6 +262,7 @@ udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 tcpSocket.bind((host, port))
 udpSocket.bind((host, portUDP))
 tcpSocket.listen(5)
+db.delete_all_online_peers()
 
 # input sockets that are listened
 inputs = [tcpSocket, udpSocket]

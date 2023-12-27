@@ -373,12 +373,13 @@ class peerMain:
 
             elif choice == "8" and self.isOnline:
                 room_name = input("room name: ")
-                self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                print(response)
                 
             elif choice == "9" and self.isOnline :
                 room_name = input("room name: ")
-                self.leaveRoom(self.loginCredentials[0],room_name)
-
+                response=self.leaveRoom(self.loginCredentials[0],room_name)
+                print(response)
 
             elif choice == "10" and self.isOnline:
                 self.print_ChatRooms()
@@ -397,8 +398,6 @@ class peerMain:
                                                  self.peerServer, None)
                     self.peerClient.start()
                     self.peerClient.join()
-
-
 
             # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
             # that's why response is evaluated in main process not the server thread even though the prompt is printed by server
@@ -490,7 +489,6 @@ class peerMain:
         message = "SEARCH " + username
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        
         response = self.tcpClientSocket.recv(1024).decode().split()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         if response[0] == "search-success":
@@ -510,10 +508,7 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-        if response == "CREATED":
-            print("CHATROOM HAS BEEN CREATED")
-        else:
-            print("CHATROOM HAS NOT BEEN CREATED")
+        print(response)
 
 
     #----------------------TO BE UPDATED--------------------------------------
@@ -523,15 +518,15 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + response)
-        if response == "MEMBER-JOINED":
-            print("\033[93mROOM JOINED successfully...\033[0m")
-            return 2  
-        elif response == "JOIN-ROOM-FAIL":
-            print("\033[93mROOM does not exist...\033[0m")
-            return 0
-        elif response == "MEMBER-IN-ROOM" :
-            print("\033[93mMember already in room \033[0m")
-            return 1
+        # if response == "MEMBER-JOINED":
+        #     print("\033[93mROOM JOINED successfully...\033[0m")
+        #     return 2
+        # elif response == "JOIN-ROOM-FAIL":
+        #     print("\033[93mROOM does not exist...\033[0m")
+        #     return 0
+        # elif response == "MEMBER-IN-ROOM" :
+        #     print("\033[93mMember already in room \033[0m")
+        #     return 1
 
   #todo :: leave room to be handled with list of rooms
     def leaveRoom(self, username,room_name):
