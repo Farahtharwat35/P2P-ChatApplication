@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="410e94b3-97c3-4b99-8d99-00c9e9ddfe97" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Sample P2P Chat in Python-20231224 (2)/Sample P2P Chat in Python-20231224/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/Sample P2P Chat in Python-20231224 (2)/Sample P2P Chat in Python-20231224/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Sample P2P Chat in Python-20231224 (2)/Sample P2P Chat in Python-20231224/peer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Sample P2P Chat in Python-20231224 (2)/Sample P2P Chat in Python-20231224/peer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/db.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,13 +31,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "CR",
-    "last_opened_file_path": "H:/Univ/Senior 1/Fall/Networks/Sample P2P Chat/Server.py"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Server-Setup&quot;,
+    &quot;last_opened_file_path&quot;: &quot;H:/Univ/Senior 1/Fall/Networks/Sample P2P Chat/Server.py&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Python.Server">
     <configuration name="Peer" type="PythonConfigurationType" factoryName="Python" singleton="false" nameIsGenerated="true">
       <module name="Sample P2P Chat" />

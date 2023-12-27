@@ -4,12 +4,12 @@
     ##  150114822 - Eren Ulaş
 '''
 
-from socket import *
+import socket
 import threading
 import select
 import logging
 import db
-
+import bcrypt
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
@@ -74,10 +74,11 @@ class ClientThread(threading.Thread):
                     # if an account with the username exists and not online
                     else:
                         # retrieves the account's password, and checks if the one entered by the user is correct
-                        retrievedPass = db.get_password(message[1])
+                        retrieved_hashed_pass = db.get_password(message[1])
                         # if password is correct, then peer's thread is added to threads list
                         # peer is added to db with its username, port number, and ip address
-                        if retrievedPass == message[2]:
+                        # if retrievedPass == message[2]:
+                        if bcrypt.checkpw(message[2].encode('utf-8'), retrieved_hashed_pass.encode('utf-8')):
                             self.username = message[1]
                             self.lock.acquire()
                             try:
@@ -91,6 +92,7 @@ class ClientThread(threading.Thread):
                             # timer thread of the udp server is started
                             response = "login-success"
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            onlinePeers.append(self.username)
                             self.tcpClientSocket.send(response.encode())
                             self.udpServer = UDPServer(self.username, self.tcpClientSocket)
                             self.udpServer.start()
@@ -116,12 +118,18 @@ class ClientThread(threading.Thread):
                         finally:
                             self.lock.release()
                         print(self.ip + ":" + str(self.port) + " is logged out")
+                        onlinePeers.remove(self.username)
                         self.tcpClientSocket.close()
                         self.udpServer.timer.cancel()
                         break
-                    else:
-                        self.tcpClientSocket.close()
-                        break
+
+                elif message[0] == "PRINT":
+                    response = "List of online users: " + ', '.join(str(user) for user in onlinePeers)
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                    self.tcpClientSocket.send(response.encode())
+
+
+
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
                     # checks if an account with the username exists
@@ -160,7 +168,7 @@ class UDPServer(threading.Thread):
         threading.Thread.__init__(self)
         self.username = username
         # timer thread for the udp server is initialized
-        self.timer = threading.Timer(3, self.waitHelloMessage)
+        self.timer = threading.Timer(20, self.waitHelloMessage)
         self.tcpClientSocket = clientSocket
     
 
@@ -171,6 +179,7 @@ class UDPServer(threading.Thread):
             db.user_logout(self.username)
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
+                onlinePeers.remove(self.username)
         self.tcpClientSocket.close()
         print("Removed " + self.username + " from online peers")
 
@@ -178,12 +187,12 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(3, self.waitHelloMessage)
+        self.timer = threading.Timer(21, self.waitHelloMessage)
         self.timer.start()
 
 
 # tcp and udp server port initializations
-print("Registy started...")
+print("\033[31mRegisty started...\033[0m")        
 port = 15600
 portUDP = 15500
 
@@ -194,41 +203,41 @@ db = db.DB()
 # first checks to get it for windows devices
 # if the device that runs this application is not windows
 # it checks to get it for macos devices
-hostname=gethostname()
+hostname=socket.gethostname()
 try:
-    host=gethostbyname(hostname)
-except gaierror:
+    host=socket.gethostbyname(hostname)
+except socket.gaierror:
     import netifaces as ni
     host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
 
-print("Registry IP address: " + host)
-print("Registry port number: " + str(port))
+print("\033[96mRegistry IP address:\033[0m " + host)
+print("\033[96mRegistry port number: \033[0m" + str(port))
 
 # onlinePeers list for online account
-onlinePeers = {}
+onlinePeers = []
 # accounts list for accounts
-accounts = {}
+accounts = []
 # tcpThreads list for online client's thread
 tcpThreads = {}
 
 #tcp and udp socket initializations
-tcpSocket = socket(AF_INET, SOCK_STREAM)
-udpSocket = socket(AF_INET, SOCK_DGRAM)
+tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 tcpSocket.bind((host,port))
 udpSocket.bind((host,portUDP))
 tcpSocket.listen(5)
-
+db.delete_all_online_peers()
 # input sockets that are listened
 inputs = [tcpSocket, udpSocket]
 
 # log file initialization
 logging.basicConfig(filename="registry.log", level=logging.INFO)
 
-# as long as at least a socket exists to listen registry runs
+# as long as at least a socket exists to listen , server runs
 while inputs:
 
-    print("Listening for incoming connections...")
+    print("\033[92mListening for incoming connections...\033[0m")
     # monitors for the incoming connections
     readable, writable, exceptional = select.select(inputs, [], [])
     for s in readable:
@@ -252,7 +261,8 @@ while inputs:
                     tcpThreads[message[1]].resetTimeout()
                     print("Hello is received from " + message[1])
                     logging.info("Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
-                    
-# registry tcp socket is closed
-tcpSocket.close()
 
+# server tcp socket is closed
+
+print(" -------------------Server shut down !------------------------")
+tcpSocket.close()
