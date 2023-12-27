@@ -179,7 +179,7 @@ class UDPServer(threading.Thread):
             db.user_logout(self.username)
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
-                del onlinePeers[self.username]
+                onlinePeers.remove(self.username)
         self.tcpClientSocket.close()
         print("Removed " + self.username + " from online peers")
 
@@ -187,7 +187,7 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(5, self.waitHelloMessage)
+        self.timer = threading.Timer(21, self.waitHelloMessage)
         self.timer.start()
 
 
@@ -227,14 +227,14 @@ udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 tcpSocket.bind((host,port))
 udpSocket.bind((host,portUDP))
 tcpSocket.listen(5)
-
+db.delete_all_online_peers()
 # input sockets that are listened
 inputs = [tcpSocket, udpSocket]
 
 # log file initialization
 logging.basicConfig(filename="registry.log", level=logging.INFO)
 
-# as long as at least a socket exists to listen registry runs
+# as long as at least a socket exists to listen , server runs
 while inputs:
 
     print("\033[92mListening for incoming connections...\033[0m")
@@ -261,6 +261,8 @@ while inputs:
                     tcpThreads[message[1]].resetTimeout()
                     print("Hello is received from " + message[1])
                     logging.info("Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
-                    
-# registry tcp socket is closed
+
+# server tcp socket is closed
+
+print(" -------------------Server shut down !------------------------")
 tcpSocket.close()
