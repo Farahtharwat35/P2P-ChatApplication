@@ -504,9 +504,9 @@ class peerMain:
             print(username + " \033[93mis not found\033[0m")
             return None
 
-    # ----------------------TO BE UPDATED--------------------------------------
+    # ----------------------UPDATED--------------------------------------
     def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_port_number):
-        message = "CREATE " + room_name + " "  
+        message = "CREATE " + room_name + " " + creator_username +" "+ creator_ip_address + " " + creator_port_number
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
@@ -519,7 +519,7 @@ class peerMain:
 
     #----------------------TO BE UPDATED--------------------------------------
     def joinRoom(self, room_name, username, ip_address, port_number):
-        message = "JOIN-ROOM "+ room_name + " " + self.loginCredentials[0]+" "+self.peerServer.peerServerHostname+" "+self.peerServerPort
+        message = "JOIN-ROOM "+ room_name + " " + username+" "+ip_address+" "+port_number
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
