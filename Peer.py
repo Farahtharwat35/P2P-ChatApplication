@@ -17,8 +17,8 @@ import bcrypt
 class PeerServer(threading.Thread):
 
     # Peer server initialization
-    def _init_(self, username, peerServerPort):
-        threading.Thread._init_(self)
+    def __init__(self, username, peerServerPort):
+        threading.Thread.__init__(self)
         # keeps the username of the peer
         self.username = username
         # tcp socket for peer server
@@ -157,8 +157,8 @@ class PeerServer(threading.Thread):
 # Client side of peer
 class PeerClient(threading.Thread):
     # variable initializations for the client side of the peer
-    def _init_(self, ipToConnect, portToConnect, username, peerServer, responseReceived):
-        threading.Thread._init_(self)
+    def __init__(self, ipToConnect, portToConnect, username, peerServer, responseReceived):
+        threading.Thread.__init__(self)
         # keeps the ip address of the peer that this will connect
         self.ipToConnect = ipToConnect
         # keeps the username of the peer
@@ -278,7 +278,7 @@ class PeerClient(threading.Thread):
 class peerMain:
 
     # peer initializations
-    def _init_(self):
+    def __init__(self):
         # ip address of the registry
         
         self.registryName = input("\033[92mEnter IP address of registry: \033[0m")
@@ -390,7 +390,7 @@ class peerMain:
                 # if searched user is found, then its ip address and port number is retrieved
                 # and a client thread is created
                 # main process waits for the client thread to finish its chat
-                if searchStatus is not None and searchStatus is not 0:
+                if searchStatus != None and searchStatus!=0:
                     searchStatus = searchStatus.split(":")
                     self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],
                                                  self.peerServer, None)
