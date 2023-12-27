@@ -95,20 +95,19 @@ class DB:
                     {"room_name": room_name},
                     {'$addToSet': {'members': member_data}}
                 )
-                print(f"Member '{username}' joined the chatroom '{room_name}' successfully.")
+                return (f"Member '{username}' joined the chatroom '{room_name}' successfully.")
             except Exception as e:
-                print(f"Error adding member '{username}' to chatroom '{room_name}': {e}")
+                return (f"Error adding member '{username}' to chatroom '{room_name}': {e}")
         else:
-            print(f"Member '{username}' is already in the chatroom '{room_name}'.")
+            return(f"Member '{username}' is already in the chatroom '{room_name}'.")
 
     def is_room_exits(self, room_name):
         try:
             # Check if a chatroom with the given name exists
             count = self.db.chatrooms.count_documents({'room_name': room_name})
-            return count > 0
+            return count > 0 , (f"ROOM IS NEW' {room_name}' ")
         except Exception as e:
-            print(f"Error checking chatroom existence for '{room_name}': {e}")
-            return False
+            return False,(f"Error checking chatroom existence for '{room_name}': {e}")
 
     def LEAVE_ROOM(self, username,room_name):
         try:
@@ -116,13 +115,12 @@ class DB:
                 {"room_name": room_name},
                 {'$pull': {'members': {'username': username}}}
             )
-            print(f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
+            return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
         except Exception as e:
-            print(f"Error removing member '{username}' from chatroom '{room_name}': {e}")
+            return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
 
     def is_member_inroom(self, room_name, username):
         try:
-
             in_room = self.db.chatrooms.find_one({"room_name": room_name, "members.username": username})
             return in_room is not None
 

@@ -10,9 +10,6 @@ import logging
 import db
 import bcrypt
 
-from ChatRoom import ChatRoom
-
-
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
@@ -146,36 +143,29 @@ class ClientThread(threading.Thread):
                     self.tcpClientSocket.send(response.encode())
 
                 elif message[0] == "JOIN-ROOM":
-
-                    if not db.is_room_exits(message[1],message[]):
-                        response = "JOIN-ROOM-FAIL"
+                    exists,response =db.is_room_exits(message[1],message[2],message[3],message[4])
+                    if not exists:
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
                     # login-online is sent to peer,
                     # if an account with the username already online
                     elif db.is_member_inroom(message[1], message[2]):
-                        print("helllooo else")
                         response = "MEMBER-IN-ROOM"
                         print("Member already in room..")
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
 
                     else:
-                        db.add_member(message[1],message[2],message[3],message[4] )
-                        response = "MEMBER-JOINED"
+                        response = db.add_member(message[1],message[2],message[3],message[4])
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
 
 
 
                 elif message[0] == "LEAVE":
-                    db.LEAVE_ROOM(message[1])
-                    response = "USER LEFT "
+                    response = db.LEAVE_ROOM(message[1])
                     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())
-
-
-
 
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
