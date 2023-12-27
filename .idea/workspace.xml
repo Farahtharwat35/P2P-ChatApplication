@@ -7,9 +7,6 @@
     <list default="true" id="410e94b3-97c3-4b99-8d99-00c9e9ddfe97" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Peer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Peer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Server.py" beforeDir="false" afterPath="$PROJECT_DIR$/Server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/peer.log" beforeDir="false" afterPath="$PROJECT_DIR$/peer.log" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,6 +43,9 @@
       <module name="Sample P2P Chat" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -64,6 +64,9 @@
       <module name="Sample P2P Chat" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="C:\Users\Farah Tharwat\AppData\Local\pypoetry\Cache\virtualenvs\sample_p2p_chat-qZYTndZf-py3.10\Scripts\python.exe" />
       <option name="SDK_NAME" value="Poetry (Sample P2P Chat)" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
@@ -122,8 +125,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.Server" />
       <item itemvalue="Python.Peer" />
+      <item itemvalue="Python.Server" />
       <item itemvalue="Python.peer" />
       <item itemvalue="Python.registry" />
     </list>

@@ -507,7 +507,6 @@ class peerMain:
                 s.bind(('localhost', port))
             return True
         except socket.error:
-            print('d5lt')
             return False
 
 
