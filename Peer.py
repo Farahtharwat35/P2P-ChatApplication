@@ -9,7 +9,6 @@ import threading
 import time
 import select
 import logging
-from ChatRoom import ChatRoom
 import bcrypt
 
 
@@ -317,22 +316,21 @@ class peerMain:
                 "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreat chat room:7\nJoin chat room:8\nLeave chat room:9\nPrint List of Chat Rooms:10\033[0m\n")
             # if choice is 1, creates an account with the username
             # and password entered by the user
-            if choice is "1":
+            if choice == "1":
                 username = input("username: ")
                 password = input("password: ")
 
                 self.createAccount(username, password)
             # if choice is 2 and user is not logged in, asks for the username
             # and the password to login
-            elif choice is "2" and not self.isOnline:
+            elif choice == "2" and not self.isOnline:
                 username = input("username: ")
                 password = input("password: ")
-                # asks for the port number for server's tcp socket
-                peerServerPort = int(input("Enter a port number for peer server: "))
-
+                peerServerPort = self.find_available_port()
+                print("Peer server port is : ", peerServerPort)
                 status = self.login(username, password, peerServerPort)
                 # is user logs in successfully, peer variables are set
-                if status is 1:
+                if status == 1:
                     self.isOnline = True
                     self.loginCredentials = (username, password)
                     self.peerServerPort = peerServerPort
@@ -386,7 +384,7 @@ class peerMain:
 
             # if choice is 5 and user is online, then user is asked
             # to enter the username of the user that is wanted to be chatted
-            elif choice is "5" and self.isOnline:
+            elif choice == "5" and self.isOnline:
                 username = input("Enter the username of user to start chat: ")
                 searchStatus = self.searchUser(username)
                 # if searched user is found, then its ip address and port number is retrieved
@@ -536,7 +534,7 @@ class peerMain:
 
     # ----------------------TO BE UPDATED--------------------------------------
     def leaveRoom(self, username,room_name):
-        message = "LEAVE "+self.loginCredentials[0]+" "+ room_name
+        message = "LEAVE "+ username + " " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
@@ -558,22 +556,6 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         print(response)
-     
-     
-        # self.room_name = room_name
-        # self.ipaddress= ipaddress
-        # self.members = set()
-
-    # def join(self, username , ip, port):
-    #     self.members.add([username,ip,port])
-
-    # def leave(self, username):
-    #     self.members.remove(username)
-
-    # def sendmsg(self, sender, message):
-    #     for member in self.members:
-    #         if member != sender:
-    #             yield member, message
 
     def print_online_users(self):
         message = "PRINT"
@@ -591,6 +573,22 @@ class peerMain:
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(1, self.sendHelloMessage)
         self.timer.start()
+
+    def is_port_available(self, port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('localhost', port))
+            return True
+        except socket.error:
+            return False
+    def find_available_port(self, start_port=49152, end_port=65535):
+        for port in range(start_port, end_port + 1):
+            if self.is_port_available(port):
+                return port
+        print("No ports available!")
+        return None  # If no available port is found in the specified range
+
 
 
 main=peerMain()
