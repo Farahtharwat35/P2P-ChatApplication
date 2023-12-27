@@ -536,7 +536,7 @@ class peerMain:
 
     # ----------------------TO BE UPDATED--------------------------------------
     def leaveRoom(self, username,room_name):
-        message = "LEAVE "+self.loginCredentials[0]+" "+roomname
+        message = "LEAVE "+self.loginCredentials[0]+" "+ room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
