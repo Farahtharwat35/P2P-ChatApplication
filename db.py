@@ -54,3 +54,68 @@ class DB:
     def delete_all_online_peers(self):
         # Delete all documents in the 'online_peers' collection
         self.db.online_peers.delete_many({})
+
+
+    def save_chatroom(self, room_name, creator_username, creator_ip_address, creator_port_number):
+        creator_data = {
+            "username": creator_username,
+            "IP address": creator_ip_address,
+            "Port_number": creator_port_number
+        }
+
+        chatroom_data = {
+            "room_name": room_name,
+            "members": [creator_data]
+        }
+
+        try:
+            self.db.chatrooms.insert_one(chatroom_data)
+            print(f"Chatroom '{room_name}' created successfully.")
+        except Exception as e:
+            print(f"Error creating chatroom '{room_name}': {e}")
+
+    def add_member(self, room_name, username, ip_address, port_number):
+        member_data = {
+            "username": username,
+            "IP address": ip_address,
+            "Port_number": port_number
+        }
+
+        try:
+
+            self.db.chatrooms.update_one(
+                {"room_name": room_name},
+                {'$addToSet': {'members': member_data}}
+            )
+            print(f"Member '{username}' joined the chatroom '{room_name}' successfully.")
+        except Exception as e:
+            print(f"Error adding member '{username}' to chatroom '{room_name}': {e}")
+
+    def is_room_exits(self, room_name):
+        try:
+            # Check if a chatroom with the given name exists
+            count = self.db.chatrooms.count_documents({'room_name': room_name})
+            return count > 0
+        except Exception as e:
+            print(f"Error checking chatroom existence for '{room_name}': {e}")
+            return False
+
+    def LEAVE_ROOM(self, username,room_name):
+        try:
+            self.db.chatrooms.update_one(
+                {"room_name": room_name},
+                {'$pull': {'members': {'username': username}}}
+            )
+            print(f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
+        except Exception as e:
+            print(f"Error removing member '{username}' from chatroom '{room_name}': {e}")
+
+    def is_member_inroom(self, room_name, username):
+        try:
+
+            in_room = self.db.chatrooms.find_one({"room_name": room_name, "members.username": username})
+            return in_room is not None
+
+        except Exception as e:
+            print(f"Error checking membership in chatroom '{room_name}': {e}")
+            return False
