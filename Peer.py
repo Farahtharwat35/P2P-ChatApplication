@@ -4,12 +4,13 @@
     ##  150114822 - Eren Ulaş
 '''
 
-from socket import *
+import socket
 import threading
 import time
 import select
 import logging
 import bcrypt
+
 
 
 
@@ -23,7 +24,7 @@ class PeerServer(threading.Thread):
         # keeps the username of the peer
         self.username = username
         # tcp socket for peer server
-        self.tcpServerSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # port number of the peer server
         self.peerServerPort = peerServerPort
         # if 1, then user is already chatting with someone
@@ -39,21 +40,23 @@ class PeerServer(threading.Thread):
         self.isOnline = True
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
+
+        self.peerServerHostname = None
     
 
     # main method of the peer server thread
     def run(self):
 
-        #print("Peer server started...")    
+        print("Peer server started...")
 
         # gets the ip address of this peer
         # first checks to get it for windows devices
         # if the device that runs this application is not windows
         # it checks to get it for macos devices
-        hostname=gethostname() #function in socket lib 
+        hostname=socket.gethostname() #function in socket lib
         try:
-            self.peerServerHostname=gethostbyname(hostname)
-        except gaierror:  #error that the ip address entered is incorrect
+            self.peerServerHostname=socket.gethostbyname(hostname)
+        except socket.gaierror:  #error that the ip address entered is incorrect
             import netifaces as ni
             self.peerServerHostname = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
@@ -168,7 +171,7 @@ class PeerClient(threading.Thread):
         # keeps the port number that this client should connect
         self.portToConnect = portToConnect
         # client side tcp socket initialization
-        self.tcpClientSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # keeps the server of this client
         self.peerServer = peerServer
         # keeps the phrase that is used when creating the client
@@ -287,10 +290,10 @@ class peerMain:
         # port number of the registry
         self.registryPort = 15600
         # tcp socket connection to registry
-        self.tcpClientSocket = socket(AF_INET, SOCK_STREAM)
+        self.tcpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpClientSocket.connect((self.registryName,self.registryPort))
         # initializes udp socket which is used to send hello messages
-        self.udpClientSocket = socket(AF_INET, SOCK_DGRAM)
+        self.udpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # udp port of the registry
         self.registryUDPPort = 15500
         # login info of the peer
@@ -305,7 +308,7 @@ class peerMain:
         self.peerClient = None
         # timer initialization
         self.timer = None
-        
+
         choice = "0"
         # log file initialization
         logging.basicConfig(filename="peer.log", level=logging.INFO)
@@ -324,15 +327,14 @@ class peerMain:
             elif choice =="2" and not self.isOnline:
                 username = input("username: ")
                 password = input("password: ")
-                # asks for the port number for server's tcp socket
-                #peerServerPort = int(input("Enter a port number for peer server: "))
-                
+                peerServerPort= self.find_available_port()
+                print("Peer server port is : ",   peerServerPort)
                 status = self.login(username, password, 15600)
                 # is user logs in successfully, peer variables are set
                 if status ==1:
                     self.isOnline = True
                     self.loginCredentials = (username, password)
-                    self.peerServerPort = 15600
+                    self.peerServerPort = peerServerPort
                     # creates the server thread for this peer, and runs it
                     self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort)
                     self.peerServer.start()
@@ -445,7 +447,7 @@ class peerMain:
         elif response == "login-wrong-password":
             print("\033[93mWrong password...\033[0m")
             return 3
-    
+
     # logout function
     def logout(self, option):
         # a logout message is composed and sent to registry
@@ -457,7 +459,7 @@ class peerMain:
             message = "LOGOUT"
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        
+
 
     # function for searching an online user
     def searchUser(self, username):
@@ -478,10 +480,10 @@ class peerMain:
         elif response[0] == "search-user-not-found":
             print(username + " \033[93mis not found\033[0m")
             return None
-    
+
 
     def print_online_users(self):
-        message = "PRINT" 
+        message = "PRINT"
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
@@ -494,8 +496,28 @@ class peerMain:
         message = "HELLO " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
-        self.timer = threading.Timer(200, self.sendHelloMessage)
+        self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
+
+
+    def is_port_available(self, port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('localhost', port))
+            return True
+        except socket.error:
+            print('d5lt')
+            return False
+
+
+    def find_available_port(self, start_port=49152, end_port=65535):
+        for port in range(start_port, end_port + 1):
+            if self.is_port_available(port):
+                return port
+        print("No ports available!")
+        return None  # If no available port is found in the specified range
+
 
 # peer is started
 main = peerMain()

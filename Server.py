@@ -4,7 +4,7 @@
     ##  150114822 - Eren Ulaş
 '''
 
-from socket import *
+import socket
 import threading
 import select
 import logging
@@ -168,7 +168,7 @@ class UDPServer(threading.Thread):
         threading.Thread.__init__(self)
         self.username = username
         # timer thread for the udp server is initialized
-        self.timer = threading.Timer(80, self.waitHelloMessage)
+        self.timer = threading.Timer(20, self.waitHelloMessage)
         self.tcpClientSocket = clientSocket
     
 
@@ -179,6 +179,7 @@ class UDPServer(threading.Thread):
             db.user_logout(self.username)
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
+                del onlinePeers[self.username]
         self.tcpClientSocket.close()
         print("Removed " + self.username + " from online peers")
 
@@ -186,7 +187,7 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(80, self.waitHelloMessage)
+        self.timer = threading.Timer(5, self.waitHelloMessage)
         self.timer.start()
 
 
@@ -202,10 +203,10 @@ db = db.DB()
 # first checks to get it for windows devices
 # if the device that runs this application is not windows
 # it checks to get it for macos devices
-hostname=gethostname()
+hostname=socket.gethostname()
 try:
-    host=gethostbyname(hostname)
-except gaierror:
+    host=socket.gethostbyname(hostname)
+except socket.gaierror:
     import netifaces as ni
     host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
@@ -221,8 +222,8 @@ accounts = []
 tcpThreads = {}
 
 #tcp and udp socket initializations
-tcpSocket = socket(AF_INET, SOCK_STREAM)
-udpSocket = socket(AF_INET, SOCK_DGRAM)
+tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 tcpSocket.bind((host,port))
 udpSocket.bind((host,portUDP))
 tcpSocket.listen(5)
