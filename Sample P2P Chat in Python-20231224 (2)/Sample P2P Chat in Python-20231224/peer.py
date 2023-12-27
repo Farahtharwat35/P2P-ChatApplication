@@ -527,7 +527,7 @@ class peerMain:
         elif response == "JOIN-ROOM-FAIL":
             print("\033[93mROOM does not exist...\033[0m")
             return 0
-        elif response == "MEMBER-IN-ROOM" :
+        elif response == "MEMBER-IN-ROOM":
             print("\033[93mMember already in room \033[0m")
             return 1
 
