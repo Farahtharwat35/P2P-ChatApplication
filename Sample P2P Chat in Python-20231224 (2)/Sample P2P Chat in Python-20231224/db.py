@@ -1,22 +1,20 @@
 from pymongo import MongoClient
 
+
+# define PY_SSIZE_T_CLEAN
 # Includes database operations
 class DB:
 
-
     # db initializations
     def __init__(self):
-        self.client = MongoClient('mongodb://localhost:27017/')
-        self.db = self.client['p2p-chat']
 
+        self.client = MongoClient('mongodb://localhost:27017')
+        self.db = self.client['p2p-chat']
 
     # checks if an account with the username exists
     def is_account_exist(self, username):
-        if self.db.accounts.count_documents({'username': username}) > 0:
-            return True
-        else:
-            return False
-    
+        return self.db.accounts.count_documents({'username': username}) > 0
+
 
     # registers a user
     def register(self, username, password):
@@ -26,20 +24,15 @@ class DB:
         }
         self.db.accounts.insert_one(account)
 
-
     # retrieves the password for a given username
     def get_password(self, username):
         return self.db.accounts.find_one({"username": username})["password"]
 
-
     # checks if an account with the username online
     def is_account_online(self, username):
-        if self.db.online_peers.count_documents({"username": username}) > 0:
-            return True
-        else:
-            return False
+        return self.db.online_peers.count_documents({"username": username}) > 0
 
-    
+
     # logs in the user
     def user_login(self, username, ip, port):
         online_peer = {
@@ -48,43 +41,81 @@ class DB:
             "port": port
         }
         self.db.online_peers.insert_one(online_peer)
-    
 
-    # logs out the user 
+    # logs out the user
     def user_logout(self, username):
         self.db.online_peers.delete_one({"username": username})
-    
 
     # retrieves the ip address and the port number of the username
     def get_peer_ip_port(self, username):
         res = self.db.online_peers.find_one({"username": username})
         return (res["ip"], res["port"])
-    
-    def savechatroom(self, room_name):
-      chatroom_data = {
-        "room_name": room_name,
-        "members" : []   
-    } 
-      self.db.chatrooms.insert_one(chatroom_data)
+
+    def delete_all_online_peers(self):
+        # Delete all documents in the 'online_peers' collection
+        self.db.online_peers.delete_many({})
 
 
-    def appendmembers(self, room_name, username):
-        self.db.chatrooms.update_one({"room_name":room_name},{'$addToSet':{'members':username}})
+    def save_chatroom(self, room_name, creator_username, creator_ip_address, creator_port_number):
+        creator_data = {
+            "username": creator_username,
+            "IP address": creator_ip_address,
+            "Port_number": creator_port_number
+        }
+
+        chatroom_data = {
+            "room_name": room_name,
+            "members": [creator_data]
+        }
+
+        try:
+            self.db.chatrooms.insert_one(chatroom_data)
+            print(f"Chatroom '{room_name}' created successfully.")
+        except Exception as e:
+            print(f"Error creating chatroom '{room_name}': {e}")
+
+    def add_member(self, room_name, username, ip_address, port_number):
+        member_data = {
+            "username": username,
+            "IP address": ip_address,
+            "Port_number": port_number
+        }
+
+        try:
+
+            self.db.chatrooms.update_one(
+                {"room_name": room_name},
+                {'$addToSet': {'members': member_data}}
+            )
+            print(f"Member '{username}' joined the chatroom '{room_name}' successfully.")
+        except Exception as e:
+            print(f"Error adding member '{username}' to chatroom '{room_name}': {e}")
 
     def is_room_exits(self, room_name):
-        if self.db.chatrooms.count_documents({'room_name': room_name}) > 0:
-            return True
-        else:
+        try:
+            # Check if a chatroom with the given name exists
+            count = self.db.chatrooms.count_documents({'room_name': room_name})
+            return count > 0
+        except Exception as e:
+            print(f"Error checking chatroom existence for '{room_name}': {e}")
             return False
 
-    def LEAVE_ROOM(self,username):
-        self.db.chatrooms.update_one({"room_name":self.room_name},{'$pull':{'members':username}})  
+    def LEAVE_ROOM(self, username,room_name):
+        try:
+            self.db.chatrooms.update_one(
+                {"room_name": room_name},
+                {'$pull': {'members': {'username': username}}}
+            )
+            print(f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
+        except Exception as e:
+            print(f"Error removing member '{username}' from chatroom '{room_name}': {e}")
 
-    def is_member_inroom(self,room_name,username):
-        room = self.db.chatrooms.find_one({"room_name": room_name})
-        mem = room.get("members",[])
-        # userinroom = ', '.join(str(mems) for mems in mem)
-        for user in mem:
-            if(user==username):
-                return 1
-        return 0
+    def is_member_inroom(self, room_name, username):
+        try:
+
+            in_room = self.db.chatrooms.find_one({"room_name": room_name, "members.username": username})
+            return in_room is not None
+
+        except Exception as e:
+            print(f"Error checking membership in chatroom '{room_name}': {e}")
+            return False

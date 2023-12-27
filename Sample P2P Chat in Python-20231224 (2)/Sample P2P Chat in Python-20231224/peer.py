@@ -509,9 +509,9 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         if response == "CREATED":
-            print(" CREATED DONE ")
+            print(" CHATROOM CREATED  ")
         else:
-            print("not created")
+            print("CHATROOM NOT CREATED ")
 
 
 
@@ -530,9 +530,7 @@ class peerMain:
         elif response == "MEMBER-IN-ROOM" :
             print("\033[93mMember already in room \033[0m")
             return 1
-            
 
-            
     def leaveRoom(self):
         message = "LEAVE "+self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
