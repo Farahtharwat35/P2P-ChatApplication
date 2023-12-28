@@ -135,7 +135,7 @@ class ClientThread(threading.Thread):
                     self.tcpClientSocket.send(response.encode())
 
                 elif message[0] == "CREATE":
-                    response_db = db.save_chatroom(message[1],message[2],message[3],message[4])
+                    response_db = db.save_chatroom(message[1],message[2],message[3],message[4],message[5])
                     logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
                     self.tcpClientSocket.send(response_db.encode())
 
@@ -156,19 +156,26 @@ class ClientThread(threading.Thread):
                         response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
                         members_list = db.get_chatroom_members(message[1])
                         for member in members_list:
-                            if member["username"] != self.username:
-                                tcpThreads[member["username"]].tcpClientSocket.send(response.encode())
+                            member_name=member["username"]
+                            if member_name != self.username:
+                                if "username" in tcpThreads:
+                                    tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                                else:
+                                    print(f"Key '{member_name}' not found in tcpThreads.")
+                                tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 # self.udpClientSocket.sendto(message.encode(),(member["IP address"], member["UDP_Port_number"]))
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-       
 
 
-#todo :: leave room to be handled with list of rooms
                 elif message[0] == "LEAVE":
                     response_db = db.LEAVE_ROOM(message[1],message[2])
-                    response = ""
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-                    self.tcpClientSocket.send(response.encode())
+                    response_peers = "Peer-LEFT"  + message[1] + " " + message[2]
+                    response_peerleft = "YOU LEFT THE ROOM"
+                    for member in members_list:
+                        if member["username"] != self.username:
+                            tcpThreads[member["username"]].tcpClientSocket.send(response_peers.encode())
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                    self.tcpClientSocket.send(response_peerleft.encode())
 
                 #   SEARCH  #
                 elif message[0] == "SEARCH":

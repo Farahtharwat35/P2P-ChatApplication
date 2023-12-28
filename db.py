@@ -56,11 +56,12 @@ class DB:
         self.db.online_peers.delete_many({})
 
 
-    def save_chatroom(self, room_name, creator_username, creator_ip_address, creator_port_number):
+    def save_chatroom(self, room_name, creator_username, creator_ip_address, tcp_port_number,udp_port_number):
         creator_data = {
             "username": creator_username,
             "IP address": creator_ip_address,
-            "Port_number": creator_port_number
+            "TCP_Port_number": tcp_port_number,
+            "UDP_Port_number": udp_port_number
         }
 
         chatroom_data = {
@@ -89,7 +90,7 @@ class DB:
         }
 
         # Check if the user is not already a member of the chatroom
-        if not self.is_member_in_room(room_name, username):
+        if not self.is_member_inroom(room_name, username):
             try:
                 self.db.chatrooms.update_one(
                     {"room_name": room_name},

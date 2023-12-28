@@ -305,6 +305,7 @@ class peerMain:
         # timer initialization
         self.timer = None
         self.peerUDPportnumber=None
+        self.list_of_members=None
 
         choice = "0"
         # log file initialization
@@ -371,7 +372,7 @@ class peerMain:
 
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
-                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumberr)
+                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
                 print(response)
 
 #todo :: Finish this function
@@ -523,18 +524,48 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + response)
+        recieve_tcpthread=threading.Thread(target=self.recieve_tcp())
+        recieve_tcpthread.start()
 
         # if response [2] == 'joined' :
 
     def recieve_tcp(self):
         tcpSocket=self.peerServer.tcpServerSocket
         inputs = [tcpSocket]
+        self.is_inroom=True
         while (self.is_inroom):
             readable, writable, exceptional = select.select(inputs, [], [])
             for s in readable:
                 message=tcpSocket.recv(1024)
-                message=message.decode()
-                print()
+                message=message.decode().split()
+                if ("MEMBER-JOINED" in message[0]):
+                    print(message[1] + " "  + "has joined the room")
+                    # Extract relevant information
+                    username = message[1]
+                    ip_address = message[2]
+                    udp_port_number = message[3]
+                    # Create member_data dictionary
+                    new_member = {
+                        "username": username,
+                        "IP address": ip_address,
+                        "UDP_Port_number": udp_port_number
+                    }
+                    self.member_list.append(new_member)
+
+                if ("YOU LEFT THE ROOM"  in message):
+                    print("YOU LEFT THE ROOM")
+                    self.is_inroom=False
+                if ("Peer-LEFT" in message):
+                    print(message[1] + "has left the chatroom")
+                    # Use a list comprehension to create a new list excluding the member with the specified username
+                    self.member_list = [member for member in self.member_list if
+                                        member["username"] != message[1]]
+
+
+
+
+
+
 
 
 
@@ -554,15 +585,15 @@ class peerMain:
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
-        if response == "USER LEFT":
+        if response == "YOU LEFT THE ROOM":
            logging.info("Received from " + self.registryName + " -> " + response)
            print("YOU LEFT")
-        elif response == "USER-NOT-IN-THIS-ROOM ":
-           logging.info("Received from " + self.registryName + " -> " + response)
-           print("YOU ARE NOT IN THIS ROOM")
-        elif response == "ROOM-DOES-NOT-EXIST ":
-           logging.info("Received from " + self.registryName + " -> " + response)
-           print("Wrong room enterd")
+        # elif response == "USER-NOT-IN-THIS-ROOM ":
+        #    logging.info("Received from " + self.registryName + " -> " + response)
+        #    print("YOU ARE NOT IN THIS ROOM")
+        # elif response == "ROOM-DOES-NOT-EXIST ":
+        #    logging.info("Received from " + self.registryName + " -> " + response)
+        #    print("Wrong room enterd")
 
 
     def print_ChatRooms(self):
