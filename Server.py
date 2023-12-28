@@ -130,10 +130,12 @@ class ClientThread(threading.Thread):
                 elif message[0] == "PRINT_CHATROOMS":
                     response_db = db.get_all_chatroom_names()
                     if "NO CHATROOMS HAVE BEEN CREATED YET" not in response_db:
-                        response = "List of chat rooms:\n" + '\n'.join(str(room_name) for room_name in chatrooms)
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                        # response = "List of chat rooms:\n" + '\n'.join(str(room_name) for room_name in response_db)
+                        response = "List of chat rooms: " + ' '.join(response_db)
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + "NO CHATROOMS HAVE BEEN CREATED YET")
                         self.tcpClientSocket.send(response.encode())
-                    self.tcpClientSocket(response_db.encode())
+                    else:
+                        self.tcpClientSocket(response_db.encode())
 
                 elif message[0] == "CREATE":
                     response_db = db.save_chatroom(message[1],message[2],message[3],message[4],message[5])
@@ -144,7 +146,6 @@ class ClientThread(threading.Thread):
                     exists,response_db =db.is_room_exits(message[1])
                     if not exists:
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-                        response = "JOIN-ROOM-FAIL"
                         self.tcpClientSocket.send(response_db.encode())
                     # login-online is sent to peer,
                     # if an account with the username already online

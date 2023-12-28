@@ -377,14 +377,18 @@ class peerMain:
 
 #todo :: Finish this function
             elif choice == "8" and self.isOnline:
-                room_names=self.get_chatrooms()
+                response=self.get_chatrooms()
+                room_names=response.split(":")[1].split()
+                # Print each chatroom name on a new line
                 if ("NO" not in room_names):
                     print("CHOOSE ONE OF THE FOLLOWING CHATROOMS TO ENTER :")
+                    for room_name in room_names:
+                        print(room_name)
                     room_name = input("room name: ")
                     response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
                     print(response)
                 else :
-                    print(room_names)
+                    print(response)
                 
             elif choice == "9" and self.isOnline :
                 room_name = input("room name: ")
