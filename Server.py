@@ -138,7 +138,7 @@ class ClientThread(threading.Thread):
                         self.tcpClientSocket(response_db.encode())
 
                 elif message[0] == "CREATE":
-                    response_db = db.save_chatroom(message[1],message[2],message[3],message[4],message[5])
+                    response_db = db.save_chatroom(message[1])
                     logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
                     self.tcpClientSocket.send(response_db.encode())
 

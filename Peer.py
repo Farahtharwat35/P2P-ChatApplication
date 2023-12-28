@@ -372,7 +372,9 @@ class peerMain:
 
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
-                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
+                response= self.Createchatroom(room_name)
+                self.joinRoom(room_name, self.loginCredentials[0], self.peerServer.peerServerHostname,
+                              self.peerServerPort, self.peerUDPportnumber)
                 print(response)
 
 #todo :: Finish this function
@@ -514,8 +516,8 @@ class peerMain:
             print(username + " \033[93mis not found\033[0m")
             return None
 
-    def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_tcp_port_number,creator_udp_port_number):
-        message = "CREATE " + room_name + " " + creator_username +" "+ str(creator_ip_address) + " " + str(creator_tcp_port_number) + " " + str(creator_udp_port_number)
+    def Createchatroom(self, room_name):
+        message = "CREATE " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()

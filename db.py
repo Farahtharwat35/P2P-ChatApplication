@@ -56,17 +56,11 @@ class DB:
         self.db.online_peers.delete_many({})
 
 
-    def save_chatroom(self, room_name, creator_username, creator_ip_address, tcp_port_number,udp_port_number):
-        creator_data = {
-            "username": creator_username,
-            "IP address": creator_ip_address,
-            "TCP_Port_number": tcp_port_number,
-            "UDP_Port_number": udp_port_number
-        }
+    def save_chatroom(self, room_name):
 
         chatroom_data = {
             "room_name": room_name,
-            "members": [creator_data]
+            "members": []
         }
 
         # Check if the room name already exists
