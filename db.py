@@ -126,3 +126,29 @@ class DB:
         except Exception as e:
             print(f"Error checking membership in chatroom '{room_name}': {e}")
             return False
+
+    def get_all_chatroom_names(self):
+        try:
+            # Find all documents in the chatrooms collection
+            cursor = self.db.chatrooms.find({}, {"room_name": 1, "_id": 0})
+
+            # Extract chatroom names from the cursor
+            chatroom_names = [chatroom["room_name"] for chatroom in cursor]
+
+            if len(chatroom_names):
+                return list(chatroom_names)
+            else:
+                return "NO CHATROOMS HAVE BEEN CREATED YET"
+        except Exception as e:
+            return f"Error getting chatroom names: {e}"
+
+    def get_chatroom_members(self, room_name):
+        # Query the chatrooms collection to find the specified chatroom
+        chatroom = self.db.chatrooms.find_one({"room_name": room_name})
+
+        if chatroom:
+            # Extract the members from the chatroom document
+            members = chatroom.get("members", [])
+            return members
+        else:
+            return f"Chatroom with name '{room_name}' not found."

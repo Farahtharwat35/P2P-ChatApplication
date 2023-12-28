@@ -128,13 +128,11 @@ class ClientThread(threading.Thread):
                     self.tcpClientSocket.send(response.encode())
 
                 elif message[0] == "PRINT_CHATROOMS":
-                    # Extract room names from the list of dictionaries
-                    print("Chatrooms:", chatrooms)
-                    room_names = [room["room_name"] for room in chatrooms]
-                    response = "List of chat rooms: " + ', '.join(str(room_name) for room_name in room_names)
+                    response = db.get_all_chatroom_names()
+                    if "NO CHATROOMS HAVE BEEN CREATED YET" not in response:
+                        response = "List of chat rooms:\n" + '\n'.join(str(room_name) for room_name in chatrooms)
                     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())
-                    print(response)
 
                 elif message[0] == "CREATE":
                     response_db = db.save_chatroom(message[1],message[2],message[3],message[4])

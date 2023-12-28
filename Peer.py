@@ -313,7 +313,7 @@ class peerMain:
 
             # menu selection prompt
             choice = input(
-                "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreat chat room:7\nJoin chat room:8\nLeave chat room:9\nPrint List of Chat Rooms:10\033[0m\n")
+                "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nLeave chat room:9\nPrint List of Chat Rooms:10\033[0m\n")
             # if choice is 1, creates an account with the username
             # and password entered by the user
             if choice == "1":
@@ -372,9 +372,14 @@ class peerMain:
 
 
             elif choice == "8" and self.isOnline:
-                room_name = input("room name: ")
-                response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
-                print(response)
+                room_names=self.get_chatrooms()
+                if (room_names[0] != "NO"):
+                    print("CHOOSE ONE OF THE FOLLOWING CHATROOMS TO ENTER :")
+                    room_name = input("room name: ")
+                    response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                    print(response)
+                else :
+                    print(room_names)
                 
             elif choice == "9" and self.isOnline :
                 room_name = input("room name: ")
@@ -394,8 +399,7 @@ class peerMain:
                 # main process waits for the client thread to finish its chat
                 if searchStatus != None and searchStatus!=0:
                     searchStatus = searchStatus.split(":")
-                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],
-                                                 self.peerServer, None)
+                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],self.peerServer, None)
                     self.peerClient.start()
                     self.peerClient.join()
 
@@ -501,7 +505,6 @@ class peerMain:
             print(username + " \033[93mis not found\033[0m")
             return None
 
-    # ----------------------UPDATED--------------------------------------
     def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_port_number):
         message = "CREATE " + room_name + " " + creator_username +" "+ str(creator_ip_address) + " " + str(creator_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
@@ -510,14 +513,15 @@ class peerMain:
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         print(response)
 
-
-    #----------------------TO BE UPDATED--------------------------------------
     def joinRoom(self, room_name, username, ip_address, port_number):
         message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + response)
+        # if response [2] == 'joined' :
+
+
         # if response == "MEMBER-JOINED":
         #     print("\033[93mROOM JOINED successfully...\033[0m")
         #     return 2
@@ -534,9 +538,9 @@ class peerMain:
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
-        if response == "USER LEFT ":
+        if response == "USER LEFT":
            logging.info("Received from " + self.registryName + " -> " + response)
-           print("You left")
+           print("YOU LEFT")
         elif response == "USER-NOT-IN-THIS-ROOM ":
            logging.info("Received from " + self.registryName + " -> " + response)
            print("YOU ARE NOT IN THIS ROOM")
@@ -546,12 +550,16 @@ class peerMain:
 
 
     def print_ChatRooms(self):
+        response = self.get_chatrooms()
+        print(response)
+
+    def get_chatrooms (self):
         message = "PRINT_CHATROOMS"
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-        print(response)
+        return response
 
     def print_online_users(self):
         message = "PRINT"
@@ -560,6 +568,9 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         print(response)
+
+    #def get_members(self,chatroom_name):
+
 
     # function for sending hello message
     # a timer thread is used to send hello messages to udp socket of registry
