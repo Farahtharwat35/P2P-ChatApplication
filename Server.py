@@ -151,12 +151,16 @@ class ClientThread(threading.Thread):
                         response = "Member already in room.."
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
-
                     else:
                         response_db = db.add_member(message[1],message[2],message[3],message[4],message[5])
-                        response = "MEMBER-JOINED"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-                        self.tcpClientSocket.send(response.encode())
+                        response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
+                        members_list = db.get_chatroom_members(message[1])
+                        for member in members_list:
+                            if member["username"] != self.username:
+                                tcpThreads[member["username"]].tcpClientSocket.send(response.encode())
+                                # self.udpClientSocket.sendto(message.encode(),(member["IP address"], member["UDP_Port_number"]))
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+       
 
 
 #todo :: leave room to be handled with list of rooms
@@ -186,6 +190,7 @@ class ClientThread(threading.Thread):
                         response = "search-user-not-found"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
+
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr))
 

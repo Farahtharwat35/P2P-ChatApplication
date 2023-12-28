@@ -523,7 +523,19 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + response)
+
         # if response [2] == 'joined' :
+
+    def recieve_tcp(self):
+        tcpSocket=self.peerServer.tcpServerSocket
+        inputs = [tcpSocket]
+        while (self.is_inroom):
+            readable, writable, exceptional = select.select(inputs, [], [])
+            for s in readable:
+                message=tcpSocket.recv(1024)
+                message=message.decode()
+                print()
+
 
 
         # if response == "MEMBER-JOINED":
@@ -585,7 +597,8 @@ class peerMain:
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
         peer_udp_port,server_udp_port = self.udpClientSocket.recvfrom(1024)
-        self.peerUDPportnumber=peer_udp_port
+       # print("TESTTTT ", peer_udp_port,server_udp_port)
+        self.peerUDPportnumber=int(peer_udp_port)
 
     def is_port_available(self,ip_no,port,udp=False):
         try:
@@ -615,13 +628,14 @@ class peerMain:
             port = input()
             print("Enter member IP number:")
             ip=input()
-            self.broadcast_message(message,port,ip)
+            self.broadcast_message_test(message,self.peerServer.peerServerHostname,port)
 
 
 
 #todo::Not finished yet
     def broadcast_message_test(self,message,ip,udpport):
-        self.udpClientSocket.sendto(message.encode(), (ip,udpport))
+
+        self.udpClientSocket.sendto(message.encode(), (ip,int(udpport)))
     def broadcast_message(self,message,members_list):
          for member in members_list :
              if member["username"] != self.username:
