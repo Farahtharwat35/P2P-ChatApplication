@@ -80,11 +80,12 @@ class DB:
         except Exception as e:
             return (f"Error creating chatroom '{room_name}': {e}")
 
-    def add_member(self, room_name, username, ip_address, port_number):
+    def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
         member_data = {
             "username": username,
             "IP address": ip_address,
-            "Port_number": port_number
+            "TCP_Port_number": tcp_port_number,
+            "UDP_Port_number" : udp_port_number
         }
 
         # Check if the user is not already a member of the chatroom
@@ -104,7 +105,10 @@ class DB:
         try:
             # Check if a chatroom with the given name exists
             count = self.db.chatrooms.count_documents({'room_name': room_name})
-            return count > 0 , (f"ROOM IS NEW' {room_name}' ")
+            if (count):
+                return count > 0 , (f"ROOM {room_name} EXISTS ")
+            else :
+                return count > 0, (f"ROOM {room_name} DOES NOT EXIST")
         except Exception as e:
             return False,(f"Error checking chatroom existence for '{room_name}': {e}")
 

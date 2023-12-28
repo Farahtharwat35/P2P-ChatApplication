@@ -304,6 +304,7 @@ class peerMain:
         self.peerClient = None
         # timer initialization
         self.timer = None
+        self.peerUDPportnumber=None
 
         choice = "0"
         # log file initialization
@@ -313,20 +314,23 @@ class peerMain:
 
             # menu selection prompt
             choice = input(
-                "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nLeave chat room:9\nPrint List of Chat Rooms:10\033[0m\n")
+                "\033[95mChoose: \nCreate account: -1\nBroadcast: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nLeave chat room:9\nPrint List of Chat Rooms:10\033[0m\n")
             # if choice is 1, creates an account with the username
             # and password entered by the user
             if choice == "1":
                 username = input("username: ")
                 password = input("password: ")
                 self.createAccount(username, password)
+            # todo : for testing purpose-------
+            if choice == "-1" and self.isOnline:
+                self.test_broadcast()
             # if choice is 2 and user is not logged in, asks for the username
             # and the password to login
             elif choice == "2" and not self.isOnline:
                 username = input("username: ")
                 password = input("password: ")
-                status = self.login(username, password,peerServerPort)
                 peerServerPort = self.find_available_port(socket.gethostbyname(socket.gethostname()))
+                status = self.login(username, password, peerServerPort)
                 print("Peer server port is : ", peerServerPort)
                 # is user logs in successfully, peer variables are set
                 if status == 1:
@@ -367,7 +371,7 @@ class peerMain:
 
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
-                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumberr)
                 print(response)
 
 #todo :: Finish this function
@@ -376,7 +380,7 @@ class peerMain:
                 if ("NO" not in room_names):
                     print("CHOOSE ONE OF THE FOLLOWING CHATROOMS TO ENTER :")
                     room_name = input("room name: ")
-                    response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
+                    response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
                     print(response)
                 else :
                     print(room_names)
@@ -505,16 +509,16 @@ class peerMain:
             print(username + " \033[93mis not found\033[0m")
             return None
 
-    def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_port_number):
-        message = "CREATE " + room_name + " " + creator_username +" "+ str(creator_ip_address) + " " + str(creator_port_number)
+    def Createchatroom(self, room_name,creator_username, creator_ip_address, creator_tcp_port_number,creator_udp_port_number):
+        message = "CREATE " + room_name + " " + creator_username +" "+ str(creator_ip_address) + " " + str(creator_tcp_port_number) + " " + str(creator_udp_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         print(response)
 
-    def joinRoom(self, room_name, username, ip_address, port_number):
-        message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(port_number)
+    def joinRoom(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
+        message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(tcp_port_number) + " " + str(udp_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
@@ -580,6 +584,8 @@ class peerMain:
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
+        peer_udp_port,server_udp_port = self.udpClientSocket.recvfrom(1024)
+        self.peerUDPportnumber=peer_udp_port
 
     def is_port_available(self,ip_no,port,udp=False):
         try:
@@ -604,13 +610,21 @@ class peerMain:
         print("Enter your message :")
         message = input()
         print("Enter member :")
-        while (message):
-            print("Enter member :")
+        while ("q" not in message):
+            print("Enter member port number:")
+            port = input()
+            print("Enter member IP number:")
+            ip=input()
+            self.broadcast_message(message,port,ip)
+
+
 
 #todo::Not finished yet
+    def broadcast_message_test(self,message,ip,udpport):
+        self.udpClientSocket.sendto(message.encode(), (ip,udpport))
     def broadcast_message(self,message,members_list):
          for member in members_list :
              if member["username"] != self.username:
-                 self.udpClientSocket.sendto(message.encode(),(member["IP address"],member["Port_number"]))
+                 self.udpClientSocket.sendto(message.encode(),(member["IP address"],member["UDP_Port_number"]))
 
 main=peerMain()

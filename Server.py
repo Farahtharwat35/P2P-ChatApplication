@@ -153,7 +153,7 @@ class ClientThread(threading.Thread):
                         self.tcpClientSocket.send(response.encode())
 
                     else:
-                        response_db = db.add_member(message[1],message[2],message[3],message[4])
+                        response_db = db.add_member(message[1],message[2],message[3],message[4],message[5])
                         response = "MEMBER-JOINED"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response.encode())
@@ -287,6 +287,7 @@ while inputs:
             # received the incoming udp message and parses it
             message, clientAddress = s.recvfrom(1024)
             message = message.decode().split()
+            print("UDP PORT IS:", clientAddress[1], "PORT NUMBER IS:",clientAddress[0])
             # checks if it is a hello message
             if message[0] == "HELLO":
                 # checks if the account that this hello message
@@ -297,6 +298,9 @@ while inputs:
                     print("Hello is received from " + message[1])
                     logging.info(
                         "Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
+                    # sending to the client its udp port which he sent from the message for future usage
+                    message2 = str(clientAddress[1])
+                    udpSocket.sendto(message2.encode(), (clientAddress[0],clientAddress[1]))
 
 # registry tcp socket is closed
 tcpSocket.close()
