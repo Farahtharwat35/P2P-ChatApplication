@@ -545,7 +545,7 @@ class peerMain:
                 message=tcpSocket.recv(1024)
                 message=message.decode().split()
                 if ("MEMBER-JOINED" in message[0]):
-                    print(message[1] + " "  + "has joined the room")
+                    print(message[1] + " " + "has joined the room")
                     # Extract relevant information
                     username = message[1]
                     ip_address = message[2]
@@ -566,13 +566,6 @@ class peerMain:
                     # Use a list comprehension to create a new list excluding the member with the specified username
                     self.member_list = [member for member in self.member_list if
                                         member["username"] != message[1]]
-
-
-
-
-
-
-
 
 
         # if response == "MEMBER-JOINED":
@@ -665,8 +658,7 @@ class peerMain:
             port = input()
             print("Enter member IP number:")
             ip=input()
-            self.broadcast_message_test(message,self.peerServer.peerServerHostname,port)
-
+            self.broadcast_message_test(message,ip,port)
 
 
 #todo::Not finished yet
