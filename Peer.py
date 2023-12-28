@@ -325,7 +325,7 @@ class peerMain:
             elif choice == "2" and not self.isOnline:
                 username = input("username: ")
                 password = input("password: ")
-                status = self.login(username, password, 15600)
+                status = self.login(username, password,peerServerPort)
                 peerServerPort = self.find_available_port(socket.gethostbyname(socket.gethostname()))
                 print("Peer server port is : ", peerServerPort)
                 # is user logs in successfully, peer variables are set
@@ -370,10 +370,10 @@ class peerMain:
                 response= self.Createchatroom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
                 print(response)
 
-
+#todo :: Finish this function
             elif choice == "8" and self.isOnline:
                 room_names=self.get_chatrooms()
-                if (room_names[0] != "NO"):
+                if ("NO" not in room_names):
                     print("CHOOSE ONE OF THE FOLLOWING CHATROOMS TO ENTER :")
                     room_name = input("room name: ")
                     response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort)
@@ -599,5 +599,18 @@ class peerMain:
                 return port
         print("No ports available!")
         return None  # If no available port is found in the specified range
+
+    def test_broadcast(self):
+        print("Enter your message :")
+        message = input()
+        print("Enter member :")
+        while (message):
+            print("Enter member :")
+
+#todo::Not finished yet
+    def broadcast_message(self,message,members_list):
+         for member in members_list :
+             if member["username"] != self.username:
+                 self.udpClientSocket.sendto(message.encode(),(member["IP address"],member["Port_number"]))
 
 main=peerMain()

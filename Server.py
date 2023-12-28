@@ -213,6 +213,7 @@ class UDPServer(threading.Thread):
             db.user_logout(self.username)
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
+                onlinePeers.remove(self.username)
         self.tcpClientSocket.close()
         print("Removed " + self.username + " from online peers")
 
