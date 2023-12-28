@@ -131,8 +131,9 @@ class ClientThread(threading.Thread):
                     response_db = db.get_all_chatroom_names()
                     if "NO CHATROOMS HAVE BEEN CREATED YET" not in response_db:
                         response = "List of chat rooms:\n" + '\n'.join(str(room_name) for room_name in chatrooms)
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-                    self.tcpClientSocket.send(response.encode())
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                        self.tcpClientSocket.send(response.encode())
+                    self.tcpClientSocket(response_db.encode())
 
                 elif message[0] == "CREATE":
                     response_db = db.save_chatroom(message[1],message[2],message[3],message[4],message[5])
