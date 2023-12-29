@@ -160,13 +160,17 @@ class ClientThread(threading.Thread):
                         for member in members_list:
                             member_name=member["username"]
                             if member_name != self.username:
-                                if "username" in tcpThreads:
+                                if member_name in tcpThreads:
                                     tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 else:
                                     print(f"Key '{member_name}' not found in tcpThreads.")
-                                tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                                #tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 # self.udpClientSocket.sendto(message.encode(),(member["IP address"], member["UDP_Port_number"]))
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
+                            else:
+                                response = "You joined the room , start chatting !"
+                                self.tcpClientSocket.send(response.encode())
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
 
                 elif message[0] == "LEAVE":
@@ -174,8 +178,10 @@ class ClientThread(threading.Thread):
                     response_peers = "Peer-LEFT"  + message[1] + " " + message[2]
                     response_peerleft = "YOU LEFT THE ROOM"
                     for member in members_list:
-                        if member["username"] != self.username:
-                            tcpThreads[member["username"]].tcpClientSocket.send(response_peers.encode())
+                        member_name = member["username"]
+                        if member_name != self.username:
+                            if member_name in tcpThreads:
+                                tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                     self.tcpClientSocket.send(response_peerleft.encode())
 
