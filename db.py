@@ -15,7 +15,6 @@ class DB:
     def is_account_exist(self, username):
         return self.db.accounts.count_documents({'username': username}) > 0
 
-
     # registers a user
     def register(self, username, password):
         account = {
@@ -31,7 +30,6 @@ class DB:
     # checks if an account with the username online
     def is_account_online(self, username):
         return self.db.online_peers.count_documents({"username": username}) > 0
-
 
     # logs in the user
     def user_login(self, username, ip, port):
@@ -55,7 +53,6 @@ class DB:
         # Delete all documents in the 'online_peers' collection
         self.db.online_peers.delete_many({})
 
-
     def save_chatroom(self, room_name):
 
         chatroom_data = {
@@ -67,13 +64,13 @@ class DB:
         existing_room = self.db.chatrooms.find_one({"room_name": room_name})
         if existing_room:
             return (f"Chatroom with name '{room_name}' already exists.")
-
-        try:
-            # If the room name doesn't exist, insert the chatroom data
-            self.db.chatrooms.insert_one(chatroom_data)
-            return (f"Chatroom '{room_name}' created successfully.")
-        except Exception as e:
-            return (f"Error creating chatroom '{room_name}': {e}")
+        else:
+            try:
+                # If the room name doesn't exist, insert the chatroom data
+                self.db.chatrooms.insert_one(chatroom_data)
+                return (f"Chatroom '{room_name}' created successfully.")
+            except Exception as e:
+                return (f"Error creating chatroom '{room_name}': {e}")
 
     def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
         member_data = {
@@ -84,7 +81,7 @@ class DB:
         }
 
         # Check if the user is not already a member of the chatroom
-        if not self.is_member_inroom(room_name, username):
+        if not self.is_member_inroom(username)[0]:
             try:
                 self.db.chatrooms.update_one(
                     {"room_name": room_name},
@@ -117,14 +114,21 @@ class DB:
         except Exception as e:
             return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
 
-    def is_member_inroom(self, room_name, username):
+    def is_member_inroom(self, username):
         try:
-            in_room = self.db.chatrooms.find_one({"room_name": room_name, "members.username": username})
-            return in_room is not None
+            # Find the chatroom where the user is a member
+            chatroom = self.db.chatrooms.find_one({"members.username": username})
+
+            if chatroom is not None:
+                # Extract the room_name from the chatroom document
+                room_name = chatroom.get("room_name", None)
+                return True, room_name
+            else:
+                return False, None
 
         except Exception as e:
-            print(f"Error checking membership in chatroom '{room_name}': {e}")
-            return False
+            print(f"Error checking membership for '{username}': {e}")
+            return False, None
 
     def get_all_chatroom_names(self):
         try:
@@ -145,9 +149,21 @@ class DB:
         # Query the chatrooms collection to find the specified chatroom
         chatroom = self.db.chatrooms.find_one({"room_name": room_name})
 
-        if chatroom:
+        if len(chatroom["members"]):
             # Extract the members from the chatroom document
             members = chatroom.get("members", [])
             return members
         else:
-            return f"Chatroom with name '{room_name}' not found."
+            return f"Member not found."
+
+    def remove_member (self,username,room_name):
+        try:
+            self.db.chatrooms.update_one(
+                {"room_name": room_name},
+                {'$pull': {'members': {'username': username}}}
+            )
+            return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
+        except Exception as e:
+            return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
+
+

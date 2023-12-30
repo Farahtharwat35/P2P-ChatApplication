@@ -136,7 +136,7 @@ class ClientThread(threading.Thread):
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + "NO CHATROOMS HAVE BEEN CREATED YET")
                         self.tcpClientSocket.send(response.encode())
                     else:
-                        self.tcpClientSocket(response_db.encode())
+                        self.tcpClientSocket.send(response_db.encode())
 
                 elif message[0] == "CREATE":
                     response_db = db.save_chatroom(message[1])
@@ -150,33 +150,34 @@ class ClientThread(threading.Thread):
                         self.tcpClientSocket.send(response_db.encode())
                     # login-online is sent to peer,
                     # if an account with the username already online
-                    elif db.is_member_inroom(message[1], message[2]):
-                        response = "Member already in room.."
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                        self.tcpClientSocket.send(response.encode())
+                    # elif db.is_member_inroom(message[1], message[2])[0]:
+                    #     response = "Member already in room.."
+                    #     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                    #     self.tcpClientSocket.send(response.encode())
                     else:
-                        response_db = db.add_member(message[1],message[2],message[3],message[4],message[5])
                         response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
                         members_list = db.get_chatroom_members(message[1])
                         # Convert members_list to a byte-like object
-                        members_list_bytes = pickle.dumps(members_list)
-
-                        for member in members_list:
-                            member_name = member["username"]
-                            if member_name in tcpThreads:
-                                if member_name != self.username:
-                                    tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                        if("not found" not in members_list):
+                            members_list_bytes = pickle.dumps(members_list)
+                            for member in members_list:
+                                member_name = member["username"]
+                                if member_name in tcpThreads:
+                                    if member_name != self.username:
+                                        tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 else:
-                                    response = "You joined the room , start chatting !"
-                                    self.tcpClientSocket.send(response.encode())
-                                    self.tcpClientSocket.send(members_list_bytes)
-                                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                            else:
-                                print(f"Key '{member_name}' not found in tcpThreads.")
-                                #tcpThreads[member_name].tcpClientSocket.send(response.encode())
-                                # self.udpClientSocket.sendto(message.encode(),(member["IP address"], member["UDP_Port_number"]))
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-
+                                    print(f"Key '{member_name}' not found in tcpThreads.")
+                            #send to the new member the list of members too !
+                            # response = "You joined the room , start chatting !"
+                            # self.tcpClientSocket.send(response.encode())
+                            self.tcpClientSocket.send(members_list_bytes)
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            db.add_member(message[1], message[2], message[3], message[4], message[5])
+                        else:
+                            response="You are the first member to join the room ! "
+                            db.add_member(message[1], message[2], message[3], message[4], message[5])
+                            self.tcpClientSocket.send(response.encode())
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
 
                 elif message[0] == "quit":
@@ -215,8 +216,7 @@ class ClientThread(threading.Thread):
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr))
 
-                # function for resettin the timeout for the udp timer thread
-
+    # function for resetting the timeout for the udp timer thread
     def resetTimeout(self):
         self.udpServer.resetTimer()
 
@@ -240,8 +240,27 @@ class UDPServer(threading.Thread):
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
                 onlinePeers.remove(self.username)
+                member_inroom, room_name = db.is_member_inroom(self.username)
+                if room_name is not None:
+                    db.remove_member(self.username, room_name)
+                    print(f'Removed {self.username} from chatroom: {room_name}')
+                    # Check if the chatroom exists before trying to get members
+                    is_room_exists, room_status = db.is_room_exits(room_name)
+                    if is_room_exists:
+                        members_list = db.get_chatroom_members(room_name)
+                        for member in members_list:
+                            member_name = member["username"]
+                            if member_name in tcpThreads:
+                                if member_name != self.username:
+                                    response = f'{self.username} left the room due to disconnection'
+                                    tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                    else:
+                        print(f"Chatroom '{room_name}' does not exist.")
+
         self.tcpClientSocket.close()
         print("Removed " + self.username + " from online peers")
+
+
 
     # resets the timer for udp server
     def resetTimer(self):

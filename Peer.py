@@ -10,6 +10,7 @@ import select
 import logging
 import bcrypt
 import pickle
+import atexit
 
 
 
@@ -310,8 +311,7 @@ class peerMain:
         #list of room members containing their info (username,ip address and port numbers)
         self.list_of_members= []
         # self.asyncio_handler = AsyncIOHandler(self)
-
-
+        atexit.register(self.cleanup)
 
         choice = "0"
         # log file initialization
@@ -379,25 +379,23 @@ class peerMain:
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
                 response= self.Createchatroom(room_name)
+                print(response)
                 #checks if chatroom response from database is that chatroom name existed before or not
                 if("already exists" not in response):
                     self.joinRoom(room_name, self.loginCredentials[0], self.peerServer.peerServerHostname,
                                   self.peerServerPort, self.peerUDPportnumber)
-                print(response)
 
             elif choice == "8" and self.isOnline:
                 response=self.get_chatrooms()
-                room_names=response.split(":")[1].split()
-                # Print each chatroom name on a new line
-                if ("NO" not in room_names):
+                if("NO" not in response):
+                    room_names=response.split(":")[1].split()
+                    # Print each chatroom name on a new line
                     print("CHOOSE ONE OF THE FOLLOWING CHATROOMS TO ENTER :")
                     for room_name in room_names:
                         print(room_name)
                     room_name = input("room name: ")
                     if(room_name in room_names):
                         self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
-                    else:
-                        print(f'Chatroom {room_name} does not exist ! ')
                 else :
                     print(response)
             #todo :: to be adjusted becaus the logic is not right
@@ -412,7 +410,7 @@ class peerMain:
             # if choice is 5 and user is online, then user is asked
             # to enter the username of the user that is wanted to be chatted
             elif choice == "5" and self.isOnline:
-                username = input("Enter the username of user to start chat: ")
+                username = input("Enter the username of user to start chat:")
                 searchStatus = self.searchUser(username)
                 # if searched user is found, then its ip address and port number is retrieved
                 # and a client thread is created
@@ -537,15 +535,6 @@ class peerMain:
         message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(tcp_port_number) + " " + str(udp_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        joining_status = self.tcpClientSocket.recv(1024).decode()
-        received_members_list = self.tcpClientSocket.recv(1024)
-        try:
-            received_members_list = pickle.loads(received_members_list)
-            self.list_of_members = received_members_list
-        except pickle.PickleError as e:
-            print(f"Error deserializing data: {e}")
-        print(joining_status)
-        logging.info("Received from " + self.registryName + " -> " + joining_status)
         recieve_tcpthread=threading.Thread(target=self.recieve_tcp)
         recieve_tcpthread.start()
         recieve_udp_thread = threading.Thread(target=self.recieve_udp)
@@ -565,37 +554,54 @@ class peerMain:
     def stop(self):
         # Perform any cleanup or graceful shutdown here
         pass
-    def recieve_tcp(self):
-        tcpSocket=self.tcpClientSocket
-        inputs = [tcpSocket]
-        self.is_inroom=True
-        while (self.is_inroom):
-            readable, writable, exceptional = select.select(inputs, [], [])
-            for s in readable:
-                message=tcpSocket.recv(1024)
-                message=message.decode().split()
-                if ("MEMBER-JOINED" in message[0]):
-                    print(message[1] + " " + "has joined the room")
-                    # Extract relevant information
-                    username = message[1]
-                    ip_address = message[2]
-                    udp_port_number = message[3]
-                    # Create member_data dictionary
-                    new_member = {
-                        "username": username,
-                        "IP address": ip_address,
-                        "UDP_Port_number": udp_port_number
-                    }
-                    self.list_of_members.append(new_member)
 
-                if ("YOU LEFT THE ROOM"  in message):
-                    print("YOU LEFT THE ROOM")
-                    self.is_inroom=False
-                if ("Peer-LEFT" in message):
-                    print(message[1] + "has left the chatroom")
-                    # Use a list comprehension to create a new list excluding the member with the specified username
-                    self.list_of_members = [member for member in self.list_of_members if
-                                        member["username"] != message[1]]
+    def recieve_tcp(self):
+        tcpSocket = self.tcpClientSocket
+        inputs = [tcpSocket]
+        self.is_inroom = True
+
+        while self.is_inroom:
+            readable, _, _ = select.select(inputs, [], [])
+            for s in readable:
+                try:
+                    # Try to decode the message as a string
+                    message = s.recv(4096)
+                    message_decoded=message.decode()
+
+                    # Handle different types of messages
+                    if message_decoded.startswith("MEMBER-JOINED"):
+                        # Extract relevant information
+                        data = message_decoded.split()
+                        username = data[1]
+                        ip_address = data[2]
+                        udp_port_number = data[3]
+                        # Create member_data dictionary
+                        new_member = {
+                            "username": username,
+                            "IP address": ip_address,
+                            "UDP_Port_number": udp_port_number
+                        }
+                        self.list_of_members.append(new_member)
+                        print(f"{username} has joined the room")
+                    elif ("You joined the room" in message_decoded) or ("left" in message_decoded) or ("first member to join" in message_decoded):
+                        print(message_decoded)
+                    elif "YOU LEFT THE ROOM" in message_decoded:
+                        print("YOU LEFT THE ROOM")
+                        self.is_inroom = False
+                    elif "Peer-LEFT" in message_decoded:
+                        username_left = message_decoded.split()[1]
+                        print(f"{username_left} has left the chatroom")
+                        # Use a list comprehension to create a new list excluding the member with the specified username
+                        self.list_of_members = [member for member in self.list_of_members if
+                                                member["username"] != username_left]
+                except UnicodeDecodeError:
+                    # Handle non-decodable messages (assumed to be binary pickled data)
+                    try:
+                        received_members_list = pickle.loads(message)
+                        self.list_of_members = received_members_list
+                        print("You joined the room , start chatting !")
+                    except pickle.PickleError as e:
+                        print(f"Error deserializing data: {e}")
         return
 
     # def recieve_udp(self):
@@ -746,9 +752,11 @@ class peerMain:
          if member["username"] != self.loginCredentials[0]:
              self.udpClientSocket.sendto(message.encode(),(member["IP address"],int(member["UDP_Port_number"])))
 
-main=peerMain()
-# try:
-#     while True:
-#         pass
-# except KeyboardInterrupt:
-#     peer.stop()
+    def cleanup(self):
+        #closing sockets
+        print("Performing cleanup...")
+        self.tcpClientSocket.close()
+        self.udpClientSocket.close()
+
+if __name__ == "__main__":
+    main_instance = peerMain()
