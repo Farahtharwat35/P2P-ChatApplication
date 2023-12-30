@@ -66,7 +66,7 @@ class DB:
         # Check if the room name already exists
         existing_room = self.db.chatrooms.find_one({"room_name": room_name})
         if existing_room:
-            return (f"Error: Chatroom with name '{room_name}' already exists.")
+            return (f"Chatroom with name '{room_name}' already exists.")
 
         try:
             # If the room name doesn't exist, insert the chatroom data

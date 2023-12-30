@@ -173,7 +173,7 @@ class ClientThread(threading.Thread):
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
 
-                elif message[0] == "LEAVE":
+                elif message[0] == "quit":
                     response_db = db.LEAVE_ROOM(message[1],message[2])
                     response_peers = "Peer-LEFT"  + message[1] + " " + message[2]
                     response_peerleft = "YOU LEFT THE ROOM"

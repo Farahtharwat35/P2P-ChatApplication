@@ -3,13 +3,13 @@
     ##  Each peer has a client and a server side that runs on different threads
     ##  150114822 - Eren Ulaş
 '''
-
+import asyncio
 import socket
 import threading
-import os
 import select
 import logging
 import bcrypt
+import queue
 
 
 
@@ -38,6 +38,8 @@ class PeerServer(threading.Thread):
         self.isOnline = True
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
+
+
 
     # main method of the peer server thread
     def run(self):
@@ -307,6 +309,9 @@ class peerMain:
         self.peerUDPportnumber=None
         #list of room members containing their info (username,ip address and port numbers)
         self.list_of_members= []
+        # self.asyncio_handler = AsyncIOHandler(self)
+
+
 
         choice = "0"
         # log file initialization
@@ -374,11 +379,12 @@ class peerMain:
             elif choice == "7" and self.isOnline:
                 room_name = input("room name: ")
                 response= self.Createchatroom(room_name)
-                self.joinRoom(room_name, self.loginCredentials[0], self.peerServer.peerServerHostname,
-                              self.peerServerPort, self.peerUDPportnumber)
+                #checks if chatroom response from database is that chatroom name existed before or not
+                if("already exists" not in response):
+                    self.joinRoom(room_name, self.loginCredentials[0], self.peerServer.peerServerHostname,
+                                  self.peerServerPort, self.peerUDPportnumber)
                 print(response)
 
-#todo :: Finish this function
             elif choice == "8" and self.isOnline:
                 response=self.get_chatrooms()
                 room_names=response.split(":")[1].split()
@@ -388,11 +394,13 @@ class peerMain:
                     for room_name in room_names:
                         print(room_name)
                     room_name = input("room name: ")
-                    response=self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
-                    print(response)
+                    if(room_name in room_names):
+                        self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
+                    else:
+                        print(f'Chatroom {room_name} does not exist ! ')
                 else :
                     print(response)
-                
+            #todo :: to be adjusted becaus the logic is not right
             elif choice == "9" and self.isOnline :
                 room_name = input("room name: ")
                 response=self.leaveRoom(self.loginCredentials[0],room_name)
@@ -523,7 +531,7 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-        print(response)
+        return response
 
     def joinRoom(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
         message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(tcp_port_number) + " " + str(udp_port_number)
@@ -532,11 +540,25 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         print(response)
         logging.info("Received from " + self.registryName + " -> " + response)
-        recieve_tcpthread=threading.Thread(target=self.recieve_tcp())
+        recieve_tcpthread=threading.Thread(target=self.recieve_tcp)
         recieve_tcpthread.start()
+        recieve_udp_thread = threading.Thread(target=self.recieve_udp)
+        recieve_udp_thread.start()
+        message = input()
+        while "quit" not in message:
+            self.broadcast_message(message, self.list_of_members)
+            message = input()
+        self.tcpClientSocket.send(message.encode(), (self.registryName, self.registryPort))
+        # Stop the thread
+        recieve_udp_thread.stop()
+        recieve_udp_thread.join()  # Wait for the thread to complete before moving on
+        recieve_tcpthread.stop()
+        recieve_tcpthread.join()
 
-        # if response [2] == 'joined' :
 
+    def stop(self):
+        # Perform any cleanup or graceful shutdown here
+        pass
     def recieve_tcp(self):
         tcpSocket=self.tcpClientSocket
         inputs = [tcpSocket]
@@ -568,17 +590,74 @@ class peerMain:
                     # Use a list comprehension to create a new list excluding the member with the specified username
                     self.list_of_members = [member for member in self.list_of_members if
                                         member["username"] != message[1]]
+        return
 
     # def recieve_udp(self):
     #     udpSocket=self.udpClientSocket
     #     inputs = [udpSocket]
-    #     message = input("Say hi to the chatroom members :) ")
-    #     while (message):
+    #     message = input ("Send hi to the chatroom members :) ")
+    #     while(message):
     #         readable, writable, exceptional = select.select(inputs, [], [])
+    #         if(readable):
+    #             message_received, clientAddress = udpSocket.recvfrom(1024)
+    #             message_received = message_received.decode()
+    #             username=self.get_username_by_port(clientAddress[1])
+    #             print(f'{username} : ' + message_received)
+    #         message = input()
+    #         if ("quit" not in message):
+    #             self.broadcast_message(message,self.list_of_members)
+    #         else :
+    #             self.tcpClientSocket.send(message.encode())
+    #             break
+    #     return
+
+
+    # def recieve_udp(self):
+    #     udpSocket = self.udpClientSocket
+    #     inputs = [udpSocket]
+    #     message = "Send hi to the chatroom members :) "
     #
+    #     send_thread = threading.Thread(target=self.send_messages)
+    #     send_thread.start()
+    #
+    #     while self.is_inroom:
+    #         readable, _, _ = select.select(inputs, [], [], 0.1)
+    #         if readable:
+    #             message_received, clientAddress = udpSocket.recvfrom(1024)
+    #             message_received = message_received.decode()
+    #             username = self.get_username_by_port(clientAddress[1])
+    #             print(f'{username} : ' + message_received)
+    #
+    #     send_thread.join()  # Wait for the send thread to finish
 
+    def recieve_udp(self):
+        udpSocket = self.udpClientSocket
+        inputs = [udpSocket]
 
+        while True:
+            try:
+                readable, _, _ = select.select(inputs, [], [])
+                if readable:
+                    message_received, clientAddress = udpSocket.recvfrom(1024)
+                    message_received = message_received.decode()
+                    username = self.get_username_by_port(int(clientAddress[1]))
+                    print(f'{username}: {message_received}')
 
+            except Exception as e:
+                print(f"Error in recieve_udp: {e}")
+        return
+
+    # def recieve_udp(self):
+    #     udpSocket = self.udpClientSocket
+    #     inputs = [udpSocket]
+    #
+    #     while self.is_inroom:
+    #         readable, _, _ = select.select(inputs, [], [], 0.1)
+    #         if readable:
+    #             message_received, clientAddress = udpSocket.recvfrom(1024)
+    #             message_received = message_received.decode()
+    #             username = self.get_username_by_port(clientAddress[1])
+    #             print(f'{username} : ' + message_received)
 
     def leaveRoom(self, username,room_name):
         message = "LEAVE "+ username + " " + room_name
@@ -588,8 +667,6 @@ class peerMain:
         if response == "YOU LEFT THE ROOM":
            logging.info("Received from " + self.registryName + " -> " + response)
            print("YOU LEFT")
-
-
 
     def print_ChatRooms(self):
         response = self.get_chatrooms()
@@ -610,9 +687,6 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         print(response)
-
-    #def get_members(self,chatroom_name):
-
 
     # function for sending hello message
     # a timer thread is used to send hello messages to udp socket of registry
@@ -656,14 +730,19 @@ class peerMain:
             ip=input()
             self.broadcast_message_test(message,ip,port)
 
+    def get_username_by_port(self, target_port):
+        for member in self.list_of_members:
+            if member.get('UDP_Port_number') == str(target_port):
+                return member.get('username')
 
-#todo::Not finished yet
-    def broadcast_message_test(self,message,ip,udpport):
-
-        self.udpClientSocket.sendto(message.encode(), (ip,int(udpport)))
     def broadcast_message(self,message,members_list):
-         for member in members_list :
-             if member["username"] != self.username:
-                 self.udpClientSocket.sendto(message.encode(),(member["IP address"],member["UDP_Port_number"]))
+     for member in members_list :
+         if member["username"] != self.loginCredentials[0]:
+             self.udpClientSocket.sendto(message.encode(),(member["IP address"],int(member["UDP_Port_number"])))
 
 main=peerMain()
+# try:
+#     while True:
+#         pass
+# except KeyboardInterrupt:
+#     peer.stop()
