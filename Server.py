@@ -9,6 +9,7 @@ import select
 import logging
 import db
 import bcrypt
+import pickle
 
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
@@ -157,20 +158,25 @@ class ClientThread(threading.Thread):
                         response_db = db.add_member(message[1],message[2],message[3],message[4],message[5])
                         response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
                         members_list = db.get_chatroom_members(message[1])
+                        # Convert members_list to a byte-like object
+                        members_list_bytes = pickle.dumps(members_list)
+
                         for member in members_list:
-                            member_name=member["username"]
-                            if member_name != self.username:
-                                if member_name in tcpThreads:
+                            member_name = member["username"]
+                            if member_name in tcpThreads:
+                                if member_name != self.username:
                                     tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 else:
-                                    print(f"Key '{member_name}' not found in tcpThreads.")
+                                    response = "You joined the room , start chatting !"
+                                    self.tcpClientSocket.send(response.encode())
+                                    self.tcpClientSocket.send(members_list_bytes)
+                                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            else:
+                                print(f"Key '{member_name}' not found in tcpThreads.")
                                 #tcpThreads[member_name].tcpClientSocket.send(response.encode())
                                 # self.udpClientSocket.sendto(message.encode(),(member["IP address"], member["UDP_Port_number"]))
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
-                            else:
-                                response = "You joined the room , start chatting !"
-                                self.tcpClientSocket.send(response.encode())
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+
 
 
                 elif message[0] == "quit":

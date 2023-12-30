@@ -9,7 +9,7 @@ import threading
 import select
 import logging
 import bcrypt
-import queue
+import pickle
 
 
 
@@ -537,9 +537,15 @@ class peerMain:
         message = "JOIN-ROOM "+ room_name + " " + username+" "+ str(ip_address) + " " + str(tcp_port_number) + " " + str(udp_port_number)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        response = self.tcpClientSocket.recv(1024).decode()
-        print(response)
-        logging.info("Received from " + self.registryName + " -> " + response)
+        joining_status = self.tcpClientSocket.recv(1024).decode()
+        received_members_list = self.tcpClientSocket.recv(1024)
+        try:
+            received_members_list = pickle.loads(received_members_list)
+            self.list_of_members = received_members_list
+        except pickle.PickleError as e:
+            print(f"Error deserializing data: {e}")
+        print(joining_status)
+        logging.info("Received from " + self.registryName + " -> " + joining_status)
         recieve_tcpthread=threading.Thread(target=self.recieve_tcp)
         recieve_tcpthread.start()
         recieve_udp_thread = threading.Thread(target=self.recieve_udp)
