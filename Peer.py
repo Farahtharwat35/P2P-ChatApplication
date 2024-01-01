@@ -10,7 +10,7 @@ import select
 import logging
 import bcrypt
 import pickle
-import atexit
+
 
 
 
@@ -311,7 +311,7 @@ class peerMain:
         #list of room members containing their info (username,ip address and port numbers)
         self.list_of_members= []
         # self.asyncio_handler = AsyncIOHandler(self)
-        atexit.register(self.cleanup)
+
 
         choice = "0"
         # log file initialization
@@ -349,6 +349,7 @@ class peerMain:
                     self.peerServer.start()
                     # hello message is sent to registry
                     self.sendHelloMessage()
+                    self.set_udp_peer_portnumber()
             # if choice is 3 and user is logged in, then user is logged out
             # and peer variables are set, and server and client sockets are closed
             elif choice == "3" and self.isOnline:
@@ -398,11 +399,11 @@ class peerMain:
                         self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
                 else :
                     print(response)
-            #todo :: to be adjusted becaus the logic is not right
-            elif choice == "9" and self.isOnline :
-                room_name = input("room name: ")
-                response=self.leaveRoom(self.loginCredentials[0],room_name)
-                print(response)
+            # #todo :: to be adjusted becaus the logic is not right
+            # elif choice == "9" and self.isOnline :
+            #     room_name = input("room name: ")
+            #     response=self.leaveRoom(self.loginCredentials[0],room_name)
+            #     print(response)
 
             elif choice == "10" and self.isOnline:
                 self.print_ChatRooms()
@@ -540,15 +541,14 @@ class peerMain:
         recieve_udp_thread = threading.Thread(target=self.recieve_udp)
         recieve_udp_thread.start()
         message = input()
-        while "quit" not in message:
+        while "leave" not in message:
             self.broadcast_message(message, self.list_of_members)
             message = input()
-        self.tcpClientSocket.send(message.encode(), (self.registryName, self.registryPort))
+        self.leaveRoom(self.loginCredentials[0],room_name)
         # Stop the thread
-        recieve_udp_thread.stop()
         recieve_udp_thread.join()  # Wait for the thread to complete before moving on
-        recieve_tcpthread.stop()
         recieve_tcpthread.join()
+
 
 
     def stop(self):
@@ -559,15 +559,14 @@ class peerMain:
         tcpSocket = self.tcpClientSocket
         inputs = [tcpSocket]
         self.is_inroom = True
-
         while self.is_inroom:
+            #listens to the server
             readable, _, _ = select.select(inputs, [], [])
             for s in readable:
+                message = s.recv(4096)
                 try:
                     # Try to decode the message as a string
-                    message = s.recv(4096)
                     message_decoded=message.decode()
-
                     # Handle different types of messages
                     if message_decoded.startswith("MEMBER-JOINED"):
                         # Extract relevant information
@@ -604,49 +603,10 @@ class peerMain:
                         print(f"Error deserializing data: {e}")
         return
 
-    # def recieve_udp(self):
-    #     udpSocket=self.udpClientSocket
-    #     inputs = [udpSocket]
-    #     message = input ("Send hi to the chatroom members :) ")
-    #     while(message):
-    #         readable, writable, exceptional = select.select(inputs, [], [])
-    #         if(readable):
-    #             message_received, clientAddress = udpSocket.recvfrom(1024)
-    #             message_received = message_received.decode()
-    #             username=self.get_username_by_port(clientAddress[1])
-    #             print(f'{username} : ' + message_received)
-    #         message = input()
-    #         if ("quit" not in message):
-    #             self.broadcast_message(message,self.list_of_members)
-    #         else :
-    #             self.tcpClientSocket.send(message.encode())
-    #             break
-    #     return
-
-
-    # def recieve_udp(self):
-    #     udpSocket = self.udpClientSocket
-    #     inputs = [udpSocket]
-    #     message = "Send hi to the chatroom members :) "
-    #
-    #     send_thread = threading.Thread(target=self.send_messages)
-    #     send_thread.start()
-    #
-    #     while self.is_inroom:
-    #         readable, _, _ = select.select(inputs, [], [], 0.1)
-    #         if readable:
-    #             message_received, clientAddress = udpSocket.recvfrom(1024)
-    #             message_received = message_received.decode()
-    #             username = self.get_username_by_port(clientAddress[1])
-    #             print(f'{username} : ' + message_received)
-    #
-    #     send_thread.join()  # Wait for the send thread to finish
-
     def recieve_udp(self):
         udpSocket = self.udpClientSocket
         inputs = [udpSocket]
-
-        while True:
+        while self.is_inroom:
             try:
                 readable, _, _ = select.select(inputs, [], [])
                 if readable:
@@ -675,10 +635,9 @@ class peerMain:
         message = "LEAVE "+ username + " " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        response = self.tcpClientSocket.recv(1024).decode()
-        if response == "YOU LEFT THE ROOM":
-           logging.info("Received from " + self.registryName + " -> " + response)
-           print("YOU LEFT")
+        # response = self.tcpClientSocket.recv(1024).decode()
+        # return response
+
 
     def print_ChatRooms(self):
         response = self.get_chatrooms()
@@ -708,10 +667,13 @@ class peerMain:
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
-        peer_udp_port,server_udp_port = self.udpClientSocket.recvfrom(1024)
-       # print("TESTTTT ", peer_udp_port,server_udp_port)
-        self.peerUDPportnumber=int(peer_udp_port)
 
+
+    def set_udp_peer_portnumber(self):
+        message = "PORTNUMBER"
+        self.tcpClientSocket.send(message.encode())
+        peer_udp_port= self.tcpClientSocket.recv(1024).decode()
+        self.peerUDPportnumber = int(peer_udp_port)
     def is_port_available(self,ip_no,port,udp=False):
         try:
             if udp :
@@ -752,11 +714,17 @@ class peerMain:
          if member["username"] != self.loginCredentials[0]:
              self.udpClientSocket.sendto(message.encode(),(member["IP address"],int(member["UDP_Port_number"])))
 
-    def cleanup(self):
-        #closing sockets
-        print("Performing cleanup...")
-        self.tcpClientSocket.close()
-        self.udpClientSocket.close()
+    # def cleanup(self):
+    #     print("Performing cleanup...")
+    #     try:
+    #         self.tcpClientSocket.close()
+    #         self.udpClientSocket.close()
+    #     except Exception as e:
+    #         print(f"Error during cleanup: {e}")
+    #     finally:
+    #         print("Cleanup completed.")
+    #
+    # atexit.register(cleanup)
 
-if __name__ == "__main__":
-    main_instance = peerMain()
+
+peerMain= peerMain()

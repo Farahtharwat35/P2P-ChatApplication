@@ -72,7 +72,7 @@ class DB:
             except Exception as e:
                 return (f"Error creating chatroom '{room_name}': {e}")
 
-    def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
+    async def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
         member_data = {
             "username": username,
             "IP address": ip_address,
@@ -104,7 +104,7 @@ class DB:
         except Exception as e:
             return False,(f"Error checking chatroom existence for '{room_name}': {e}")
 
-    def LEAVE_ROOM(self, username,room_name):
+    def leave_room(self,username,room_name):
         try:
             self.db.chatrooms.update_one(
                 {"room_name": room_name},
