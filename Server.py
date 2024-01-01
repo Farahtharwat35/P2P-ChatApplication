@@ -143,7 +143,7 @@ class ClientThread(threading.Thread):
 
                 elif message[0] == "CREATE":
                     async def create_chatroom():
-                        response_db = db.save_chatroom(message[1])
+                        response_db = await db.save_chatroom(message[1])
                         logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response_db.encode())
 
@@ -223,8 +223,8 @@ class ClientThread(threading.Thread):
                                 if member_name in tcpThreads:
                                     tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_peerleft)
-                    self.tcpClientSocket.send(response_peerleft.encode())
-                    response_db = db.leave_room(message[1], message[2])
+                        self.tcpClientSocket.send(response_peerleft.encode())
+                        response_db = db.leave_room(message[1], message[2])
 
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
