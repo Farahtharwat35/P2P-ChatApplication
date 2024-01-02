@@ -580,7 +580,6 @@ class peerMain:
                     elif "YOU LEFT THE ROOM" in message_decoded:
                         print("YOU LEFT THE ROOM")
                         self.is_inroom = False
-                        break
                     elif "Peer-LEFT" in message_decoded:
                         username_left = message_decoded.split()[1]
                         print(f"{username_left} has left the chatroom")
@@ -613,25 +612,11 @@ class peerMain:
                 print(f"Error in recieve_udp: {e}")
         return
 
-    # def recieve_udp(self):
-    #     udpSocket = self.udpClientSocket
-    #     inputs = [udpSocket]
-    #
-    #     while self.is_inroom:
-    #         readable, _, _ = select.select(inputs, [], [], 0.1)
-    #         if readable:
-    #             message_received, clientAddress = udpSocket.recvfrom(1024)
-    #             message_received = message_received.decode()
-    #             username = self.get_username_by_port(clientAddress[1])
-    #             print(f'{username} : ' + message_received)
-
     def leaveRoom(self, username,room_name):
         message = "LEAVE "+ username + " " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        # response = self.tcpClientSocket.recv(1024).decode()
-        # return response
-
+        return
 
     def print_ChatRooms(self):
         response = self.get_chatrooms()
@@ -662,7 +647,6 @@ class peerMain:
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
         return "done"
-
 
     def set_udp_peer_portnumber(self):
         message = "PORTNUMBER"

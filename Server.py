@@ -147,33 +147,13 @@ class ClientThread(threading.Thread):
 
 
                 elif message[0] == "JOIN-ROOM":
-                    # async def add_db():
-                    #     # your asynchronous code here
-                    #     await db.add_member(message[1], message[2], message[3], message[4], message[5])
-
                     exists, response_db = db.is_room_exits(message[1])
                     if not exists:
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response_db.encode())
-                    # login-online is sent to peer,
-                    # if an account with the username already online
-                    # elif db.is_member_inroom(message[1], message[2])[0]:
-                    #     response = "Member already in room.."
-                    #     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                    #     self.tcpClientSocket.send(response.encode())
                     else:
                         response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
                         members_list = db.get_chatroom_members(message[1])
-                        # Convert members_list to a byte-like object
-                        # if ("not found" not in members_list):
-                        #     members_list_bytes = pickle.dumps(members_list)
-                        #     for member in members_list:
-                        #         member_name = member["username"]
-                        #         if member_name in tcpThreads:
-                        #             if member_name != self.username:
-                        #                 tcpThreads[member_name].tcpClientSocket.send(response.encode())
-                        #         else:
-                        #             print(f"Key '{member_name}' not found in tcpThreads.")
                         if ("not found" not in members_list):
                             members_list_bytes = pickle.dumps(members_list)
                             # Acquire lock before iterating through tcpThreads
@@ -188,8 +168,8 @@ class ClientThread(threading.Thread):
                             # send to the new member the list of members too !
                             # response = "You joined the room , start chatting !"
                             # self.tcpClientSocket.send(response.encode())
-                            response_test= db.add_member(message[1], message[2], message[3], message[4], message[5])
-                            print("____________________DB response for joining :" , response_test)
+                            response_test=db.add_member(message[1], message[2], message[3], message[4], message[5])
+                            print("DB response for joining :" , response_test)
                             self.tcpClientSocket.sendall(members_list_bytes)
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
@@ -203,14 +183,10 @@ class ClientThread(threading.Thread):
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
                 elif message[0] == "LEAVE":
-                    response_peers = "Peer-LEFT" + message[1] + " " + message[2] #message[1]=username, message[2]=room_name
+                    # message[1]=username, message[2]=room_name
+                    response_peers = "Peer-LEFT" + message[1] + " " + message[2]
                     response_peerleft = "YOU LEFT THE ROOM"
-                    # for member in members_list:
-                    #     member_name = member["username"]
-                    #     if member_name != self.username:
-                    #         if member_name in tcpThreads:
-                    #             tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
-                    #         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_peerleft)
+                    members_list = db.get_chatroom_members(message[1])
                     # Acquire lock before iterating over members_list
                     with lock:
                         for member in members_list:
@@ -220,7 +196,8 @@ class ClientThread(threading.Thread):
                                     tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_peerleft)
                         self.tcpClientSocket.send(response_peerleft.encode())
-                        response_db = db.leave_room(message[1], message[2])
+                        db.leave_room(message[1], message[2])
+
 
                 #   SEARCH  #
                 elif message[0] == "SEARCH":
@@ -380,20 +357,6 @@ while inputs:
             message, clientAddress = s.recvfrom(1024)
             message = message.decode().split()
             print("UDP PORT IS:", clientAddress[1], "PORT NUMBER IS:", clientAddress[0])
-            # checks if it is a hello message
-            # if message[0] == "HELLO":
-            #     # checks if the account that this hello message
-            #     # is sent from is online
-            #     if message[1] in tcpThreads:
-            #         # resets the timeout for that peer since the hello message is received
-            #         tcpThreads[message[1]].resetTimeout()
-            #         print("Hello is received from " + message[1])
-            #         logging.info(
-            #             "Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
-            #         # sending to the client its udp port which he sent from the message for future usage
-            #         # Check if the username is already in udpPortnumbers
-            #         if message[1] not in udpPortnumbers:
-            #             udpPortnumbers[message[1]] = int(clientAddress[1])
 
             # checks if it is a hello message
             if message[0] == "HELLO":
