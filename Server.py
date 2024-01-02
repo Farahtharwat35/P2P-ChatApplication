@@ -184,7 +184,7 @@ class ClientThread(threading.Thread):
 
                 elif message[0] == "LEAVE":
                     # message[1]=username, message[2]=room_name
-                    response_peers = "Peer-LEFT" + message[1] + " " + message[2]
+                    response_peers = "Peer-LEFT" + " " + message[1] + " " + message[2]
                     response_peerleft = "YOU LEFT THE ROOM"
                     members_list = db.get_chatroom_members(message[2])
                     # Acquire lock before iterating over members_list

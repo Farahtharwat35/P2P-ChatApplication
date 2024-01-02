@@ -312,9 +312,10 @@ class peerMain:
         self.peerUDPportnumber=None
         #list of room members containing their info (username,ip address and port numbers)
         self.list_of_members= []
-        # self.asyncio_handler = AsyncIOHandler(self)
         # Register cleanup function with atexit
         atexit.register(self.cleanup)
+        #to signal threads to stop when peer leaves the chatroom
+        self.is_inroom_event = threading.Event()
 
         choice = "0"
         # log file initialization
@@ -544,9 +545,13 @@ class peerMain:
             self.broadcast_message(message, self.list_of_members)
             message = input()
         self.leaveRoom(self.loginCredentials[0],room_name)
+        # Set the event to signal threads to stop
+        self.is_inroom = False
+        self.is_inroom_event.set()
         # Stop the thread
         recieve_udp_thread.join()  # Wait for the thread to complete before moving on
         recieve_tcpthread.join()
+        return
 
     def recieve_tcp(self):
         tcpSocket = self.tcpClientSocket
