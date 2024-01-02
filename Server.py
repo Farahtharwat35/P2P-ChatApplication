@@ -350,6 +350,7 @@ tcpSocket.bind((host, port))
 udpSocket.bind((host, portUDP))
 tcpSocket.listen(5)
 db.delete_all_online_peers()
+db.delete_all_members()
 
 # input sockets that are listened
 inputs = [tcpSocket, udpSocket]

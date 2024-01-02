@@ -166,5 +166,23 @@ class DB:
             return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
         except Exception as e:
              return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
+
+    def delete_all_members(self):
+        try:
+            # Find all documents in the chatrooms collection
+            cursor = self.db.chatrooms.find({}, {"room_name": 1, "_id": 0})
+
+            # Iterate through each chatroom and remove all members
+            for chatroom in cursor:
+                room_name = chatroom.get("room_name", None)
+                if room_name:
+                    self.db.chatrooms.update_one(
+                        {"room_name": room_name},
+                        {'$set': {'members': []}}
+                    )
+            return "All members in all rooms have been deleted successfully."
+        except Exception as e:
+            return f"Error deleting all members in all rooms: {e}"
+
     
     
