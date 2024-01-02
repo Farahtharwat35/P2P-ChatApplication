@@ -4,6 +4,7 @@
     ##  150114822 - Eren Ulaş
 '''
 import asyncio
+import atexit
 import socket
 import threading
 import select
@@ -39,6 +40,7 @@ class PeerServer(threading.Thread):
         self.isOnline = True
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
+
 
 
 
@@ -311,7 +313,8 @@ class peerMain:
         #list of room members containing their info (username,ip address and port numbers)
         self.list_of_members= []
         # self.asyncio_handler = AsyncIOHandler(self)
-
+        # Register cleanup function with atexit
+        atexit.register(self.cleanup)
 
         choice = "0"
         # log file initialization
@@ -348,8 +351,9 @@ class peerMain:
                     self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort)
                     self.peerServer.start()
                     # hello message is sent to registry
-                    self.sendHelloMessage()
-                    self.set_udp_peer_portnumber()
+                    hello = self.sendHelloMessage()
+                    if("done" in hello):
+                        self.set_udp_peer_portnumber()
             # if choice is 3 and user is logged in, then user is logged out
             # and peer variables are set, and server and client sockets are closed
             elif choice == "3" and self.isOnline:
@@ -399,11 +403,6 @@ class peerMain:
                         self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
                 else :
                     print(response)
-            # #todo :: to be adjusted becaus the logic is not right
-            # elif choice == "9" and self.isOnline :
-            #     room_name = input("room name: ")
-            #     response=self.leaveRoom(self.loginCredentials[0],room_name)
-            #     print(response)
 
             elif choice == "10" and self.isOnline:
                 self.print_ChatRooms()
@@ -549,12 +548,6 @@ class peerMain:
         recieve_udp_thread.join()  # Wait for the thread to complete before moving on
         recieve_tcpthread.join()
 
-
-
-    def stop(self):
-        # Perform any cleanup or graceful shutdown here
-        pass
-
     def recieve_tcp(self):
         tcpSocket = self.tcpClientSocket
         inputs = [tcpSocket]
@@ -585,8 +578,8 @@ class peerMain:
                     elif ("You joined the room" in message_decoded) or ("left" in message_decoded) or ("first member to join" in message_decoded):
                         print(message_decoded)
                     elif "YOU LEFT THE ROOM" in message_decoded:
-                        print("YOU LEFT THE ROOM")
                         self.is_inroom = False
+                        print("YOU LEFT THE ROOM")
                     elif "Peer-LEFT" in message_decoded:
                         username_left = message_decoded.split()[1]
                         print(f"{username_left} has left the chatroom")
@@ -667,6 +660,7 @@ class peerMain:
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
+        return "done"
 
 
     def set_udp_peer_portnumber(self):
@@ -714,17 +708,14 @@ class peerMain:
          if member["username"] != self.loginCredentials[0]:
              self.udpClientSocket.sendto(message.encode(),(member["IP address"],int(member["UDP_Port_number"])))
 
-    # def cleanup(self):
-    #     print("Performing cleanup...")
-    #     try:
-    #         self.tcpClientSocket.close()
-    #         self.udpClientSocket.close()
-    #     except Exception as e:
-    #         print(f"Error during cleanup: {e}")
-    #     finally:
-    #         print("Cleanup completed.")
-    #
-    # atexit.register(cleanup)
-
+    def cleanup(self):
+        print("Performing cleanup...")
+        try:
+            self.tcpClientSocket.close()
+            self.udpClientSocket.close()
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        finally:
+            print("Cleanup completed.")
 
 peerMain= peerMain()

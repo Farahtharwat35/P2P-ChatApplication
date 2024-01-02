@@ -274,33 +274,6 @@ class UDPServer(threading.Thread):
         # Define a lock for thread safety
         self.lock = threading.Lock()
 
-
-    # if hello message is not received before timeout
-    # then peer is disconnected
-    # def waitHelloMessage(self):
-    #     if self.username is not None:
-    #         db.user_logout(self.username)
-    #         if self.username in tcpThreads:
-    #             del tcpThreads[self.username]
-    #             del udpPortnumbers[self.username]
-    #             onlinePeers.remove(self.username)
-    #             member_inroom, room_name = db.is_member_inroom(self.username)
-    #             if room_name is not None:
-    #                 db.remove_member(self.username, room_name)
-    #                 print(f'Removed {self.username} from chatroom: {room_name}')
-    #                 # Check if the chatroom exists before trying to get members
-    #                 is_room_exists, room_status = db.is_room_exits(room_name)
-    #                 if is_room_exists:
-    #                     members_list = db.get_chatroom_members(room_name)
-    #                     for member in members_list:
-    #                         member_name = member["username"]
-    #                         if member_name in tcpThreads:
-    #                             if member_name != self.username:
-    #                                 response = f'{self.username} left the room due to disconnection'
-    #                                 tcpThreads[member_name].tcpClientSocket.send(response.encode())
-    #                 else:
-    #                     print(f"Chatroom '{room_name}' does not exist.")
-
     def waitHelloMessage(self):
         if self.username is not None:
             with self.lock:  # Acquire the lock before accessing shared data
@@ -434,6 +407,7 @@ while inputs:
                         # Check if the username is already in udpPortnumbers
                         if message[1] not in udpPortnumbers:
                             udpPortnumbers[message[1]] = int(clientAddress[1])
+                            print("Peer port entered UDP : " , udpPortnumbers[message[1]])
                         # resets the timeout for that peer since the hello message is received
                         tcpThreads[message[1]].resetTimeout()
 
