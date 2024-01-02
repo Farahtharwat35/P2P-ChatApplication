@@ -150,7 +150,6 @@ class DB:
     def get_chatroom_members(self, room_name):
             # Query the chatrooms collection to find the specified chatroom
             chatroom = self.db.chatrooms.find_one({"room_name": room_name})
-
             if len(chatroom["members"]):
                 # Extract the members from the chatroom document
                 members = chatroom.get("members", [])
