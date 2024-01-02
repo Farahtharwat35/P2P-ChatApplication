@@ -53,42 +53,43 @@ class DB:
         # Delete all documents in the 'online_peers' collection
         self.db.online_peers.delete_many({})
 
-    async def save_chatroom(self, room_name):
+    def save_chatroom(self, room_name):
 
         chatroom_data = {
             "room_name": room_name,
             "members": []
         }
-        existing_room = await self.db.chatrooms.find_one({"room_name": room_name})
+        existing_room = self.db.chatrooms.find_one({"room_name": room_name})
         if existing_room is not None:
             return f"Chatroom with name '{room_name}' already exists."
         else:
             try:
-                await self.db.chatrooms.insert_one(chatroom_data)
+                self.db.chatrooms.insert_one(chatroom_data)
                 return f"Chatroom '{room_name}' created successfully."
             except Exception as e:
                 return f"Error creating chatroom '{room_name}': {e}"
 
-    async def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
-        member_data = {
-            "username": username,
-            "IP address": ip_address,
-            "TCP_Port_number": tcp_port_number,
-            "UDP_Port_number" : udp_port_number
-        }
 
-        # Check if the user is not already a member of the chatroom
-        if not self.is_member_inroom(username)[0]:
-            try:
-                await self.db.chatrooms.update_one(
-                    {"room_name": room_name},
-                    {'$addToSet': {'members': member_data}}
-                )
-                return (f"Member '{username}' joined the chatroom '{room_name}' successfully.")
-            except Exception as e:
-                return (f"Error adding member '{username}' to chatroom '{room_name}': {e}")
-        else:
-            return(f"Member '{username}' is already in the chatroom '{room_name}'.")
+    def add_member(self, room_name, username, ip_address, tcp_port_number,udp_port_number):
+            member_data = {
+                "username": username,
+                "IP address": ip_address,
+                "TCP_Port_number": tcp_port_number,
+                "UDP_Port_number" : udp_port_number
+            }
+
+            # Check if the user is not already a member of the chatroom
+            if not self.is_member_inroom(username)[0]:
+                try:
+                    self.db.chatrooms.update_one(
+                        {"room_name": room_name},
+                        {'$addToSet': {'members': member_data}}
+                    )
+                    return (f"Member '{username}' joined the chatroom '{room_name}' successfully.")
+                except Exception as e:
+                    return (f"Error adding member '{username}' to chatroom '{room_name}': {e}")
+            else:
+                return(f"Member '{username}' is already in the chatroom '{room_name}'.")
 
     def is_room_exits(self, room_name):
         try:
@@ -101,66 +102,69 @@ class DB:
         except Exception as e:
             return False,(f"Error checking chatroom existence for '{room_name}': {e}")
 
-    async def leave_room(self,username,room_name):
-        try:
-            await self.db.chatrooms.update_one(
-                {"room_name": room_name},
-                {'$pull': {'members': {'username': username}}}
-            )
-            return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
-        except Exception as e:
-            return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
 
-    async def is_member_inroom(self, username):
-        try:
-            # Find the chatroom where the user is a member
-            chatroom = await self.db.chatrooms.find_one({"members.username": username})
+    def leave_room(self,username,room_name):
+            try:
+                self.db.chatrooms.update_one(
+                    {"room_name": room_name},
+                    {'$pull': {'members': {'username': username}}}
+                )
+                return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
+            except Exception as e:
+                return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
 
-            if chatroom is not None:
-                # Extract the room_name from the chatroom document
-                room_name = chatroom.get("room_name", None)
-                return True, room_name
-            else:
+
+    def is_member_inroom(self, username):
+            try:
+                # Find the chatroom where the user is a member
+                chatroom = self.db.chatrooms.find_one({"members.username": username})
+
+                if chatroom is not None:
+                    # Extract the room_name from the chatroom document
+                    room_name = chatroom.get("room_name", None)
+                    return True, room_name
+                else:
+                    return False, None
+
+            except Exception as e:
+                print(f"Error checking membership for '{username}': {e}")
                 return False, None
 
-        except Exception as e:
-            print(f"Error checking membership for '{username}': {e}")
-            return False, None
 
-    async def get_all_chatroom_names(self):
-        try:
-            # Find all documents in the chatrooms collection
-            cursor = await self.db.chatrooms.find({}, {"room_name": 1, "_id": 0})
+    def get_all_chatroom_names(self):
+            try:
+                # Find all documents in the chatrooms collection
+                cursor = self.db.chatrooms.find({}, {"room_name": 1, "_id": 0})
 
-            # Extract chatroom names from the cursor
-            chatroom_names = [chatroom["room_name"] for chatroom in cursor]
+                # Extract chatroom names from the cursor
+                chatroom_names = [chatroom["room_name"] for chatroom in cursor]
 
-            if len(chatroom_names):
-                return list(chatroom_names)
+                if len(chatroom_names):
+                    return list(chatroom_names)
+                else:
+                    return "NO CHATROOMS HAVE BEEN CREATED YET"
+            except Exception as e:
+                return f"Error getting chatroom names: {e}"
+
+
+    def get_chatroom_members(self, room_name):
+            # Query the chatrooms collection to find the specified chatroom
+            chatroom = self.db.chatrooms.find_one({"room_name": room_name})
+
+            if len(chatroom["members"]):
+                # Extract the members from the chatroom document
+                members = chatroom.get("members", [])
+                return members
             else:
-                return "NO CHATROOMS HAVE BEEN CREATED YET"
-        except Exception as e:
-            return f"Error getting chatroom names: {e}"
+                return f"Member not found."
 
-    async def get_chatroom_members(self, room_name):
-        # Query the chatrooms collection to find the specified chatroom
-        chatroom = await self.db.chatrooms.find_one({"room_name": room_name})
-
-        if len(chatroom["members"]):
-            # Extract the members from the chatroom document
-            members = chatroom.get("members", [])
-            return members
-        else:
-            return f"Member not found."
-
-    async def remove_member(self,username,room_name):
+    def remove_member(self,username,room_name):
         try:
-            await self.db.chatrooms.update_one(
-                {"room_name": room_name},
-                {'$pull': {'members': {'username': username}}}
-            )
+            self.db.chatrooms.update_one(
+            {"room_name": room_name},
+            {'$pull': {'members': {'username': username}}})
             return (f"Member '{username}' removed from the chatroom '{room_name}' successfully.")
         except Exception as e:
-            return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
-
-
+             return (f"Error removing member '{username}' from chatroom '{room_name}': {e}")
+    
+    
