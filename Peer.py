@@ -578,8 +578,9 @@ class peerMain:
                     elif ("You joined the room" in message_decoded) or ("left" in message_decoded) or ("first member to join" in message_decoded):
                         print(message_decoded)
                     elif "YOU LEFT THE ROOM" in message_decoded:
-                        self.is_inroom = False
                         print("YOU LEFT THE ROOM")
+                        self.is_inroom = False
+                        break
                     elif "Peer-LEFT" in message_decoded:
                         username_left = message_decoded.split()[1]
                         print(f"{username_left} has left the chatroom")
