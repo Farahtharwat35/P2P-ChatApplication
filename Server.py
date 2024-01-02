@@ -28,8 +28,7 @@ class ClientThread(threading.Thread):
         self.username = None
         self.isOnline = True
         self.udpServer = None
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+
         print("New thread started for " + ip + ":" + str(port))
 
  # main of the thread
@@ -142,18 +141,15 @@ class ClientThread(threading.Thread):
                         self.tcpClientSocket.send(response_db.encode())
 
                 elif message[0] == "CREATE":
-                    async def create_chatroom():
-                        response_db = await db.save_chatroom(message[1])
-                        logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
-                        self.tcpClientSocket.send(response_db.encode())
+                    response_db = db.save_chatroom(message[1])
+                    logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
+                    self.tcpClientSocket.send(response_db.encode())
 
-                        # Call the coroutine using the thread's event loop
-                    self.loop.run_until_complete(create_chatroom())
 
                 elif message[0] == "JOIN-ROOM":
-                    async def add_db():
-                        # your asynchronous code here
-                        await db.add_member(message[1], message[2], message[3], message[4], message[5])
+                    # async def add_db():
+                    #     # your asynchronous code here
+                    #     await db.add_member(message[1], message[2], message[3], message[4], message[5])
 
                     exists, response_db = db.is_room_exits(message[1])
                     if not exists:
@@ -192,19 +188,19 @@ class ClientThread(threading.Thread):
                             # send to the new member the list of members too !
                             # response = "You joined the room , start chatting !"
                             # self.tcpClientSocket.send(response.encode())
+                            response_test= db.add_member(message[1], message[2], message[3], message[4], message[5])
+                            print("____________________DB response for joining :" , response_test)
                             self.tcpClientSocket.sendall(members_list_bytes)
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+
                             #db.add_member(message[1], message[2], message[3], message[4], message[5])
-                            self.loop.run_until_complete(add_db())
+
                         else:
                             response = "You are the first member to join the room ! "
-                            #db.add_member(message[1], message[2], message[3], message[4], message[5])
-                            self.loop.run_until_complete(add_db())
+                            response_test = db.add_member(message[1], message[2], message[3], message[4], message[5])
+                            print("DB response for joining :", response_test)
                             self.tcpClientSocket.send(response.encode())
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                    self.loop.close()
-
-
 
                 elif message[0] == "LEAVE":
                     response_peers = "Peer-LEFT" + message[1] + " " + message[2] #message[1]=username, message[2]=room_name
