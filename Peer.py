@@ -212,7 +212,6 @@ class PeerClient(threading.Thread):
                 # as long as the server status is chatting, this client can send messages
                 while self.peerServer.isChatRequested == 1:
                     # message input prompt
-                    print(f'{self.username}:')
                     messageSent = input()
                     if(messageSent != " "):
                         # sends the message to the connected peer, and logs it
@@ -262,7 +261,7 @@ class PeerClient(threading.Thread):
             # client can send messsages as long as the server status is chatting
             while self.peerServer.isChatRequested == 1:
                 # input prompt for user to enter message
-                messageSent = input(self.username + ": ")
+                messageSent = input()
                 self.tcpClientSocket.send(messageSent.encode())
                 logging.info("Send to " + self.ipToConnect + ":" + str(self.portToConnect) + " -> " + messageSent)
                 # if a quit message is sent, server status is changed
@@ -316,8 +315,7 @@ class peerMain:
         self.list_of_members= []
         # Register cleanup function with atexit
         atexit.register(self.cleanup)
-        #to signal threads to stop when peer leaves the chatroom
-        self.is_inroom_event = threading.Event()
+
 
         choice = "0"
         # log file initialization
@@ -325,9 +323,13 @@ class peerMain:
         # as long as the user is not logged out, asks to select an option in the menu
         while choice != "3":
 
-            # menu selection prompt
-            choice = input(
-                "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nPrint List of Chat Rooms:9\033[0m\n")
+            if (self.isOnline):
+                choice = input(
+                    "\033[95mChoose: \nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nPrint List of Chat Rooms:9\033[0m\n")
+            else:
+                # menu selection prompt
+                choice = input(
+                    "\033[95mChoose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nPrint list of online users:6\nCreate chat room:7\nJoin chat room:8\nPrint List of Chat Rooms:9\033[0m\n")
             # if choice is 1, creates an account with the username
             # and password entered by the user
             if choice == "1":
@@ -412,18 +414,18 @@ class peerMain:
             # to enter the username of the user that is wanted to be chatted
             elif choice == "5" and self.isOnline:
                 username = input("Enter the username of user to start chat:")
-                if self.loginCredentials[0] in username:
+                if self.loginCredentials[0] == username:
                     print("YOU CANNOT CHAT WITH YOURSELF !")
-                searchStatus = self.searchUser(username)
-                print("-----------",searchStatus)
-                # if searched user is found, then its ip address and port number is retrieved
-                # and a client thread is created
-                # main process waits for the client thread to finish its chat
-                if searchStatus != None and searchStatus!=0:
-                    searchStatus = searchStatus.split(":")
-                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],self.peerServer, None)
-                    self.peerClient.start()
-                    self.peerClient.join()
+                else:
+                    searchStatus = self.searchUser(username)
+                    # if searched user is found, then its ip address and port number is retrieved
+                    # and a client thread is created
+                    # main process waits for the client thread to finish its chat
+                    if searchStatus != None and searchStatus!=0:
+                        searchStatus = searchStatus.split(":")
+                        self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],self.peerServer, None)
+                        self.peerClient.start()
+                        self.peerClient.join()
 
             # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
             # that's why response is evaluated in main process not the server thread even though the prompt is printed by server
