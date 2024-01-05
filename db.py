@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from motor.motor_asyncio import AsyncIOMotorClient
+
 
 # define PY_SSIZE_T_CLEAN
 # Includes database operations
