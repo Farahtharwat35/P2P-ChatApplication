@@ -29,7 +29,7 @@ class Performance_Test():
     def create_chatroom(self):
         for room_id in range(self.rooms_count):
             start_time = time.time()
-            join_index = self.rooms_count * room_id
+            join_index = self.peers_per_room * room_id
             print(f'Join-index of {join_index}')
             creator_peer = self.peers[join_index]
             room_name = f'room_{room_id}'
@@ -52,6 +52,7 @@ class Performance_Test():
     # room2: 20:29
     # room3: 30:26
     # room9: 90:99
+
 
     # def send_messages(self):
     #     for room_id in range(self.rooms_count):
@@ -93,7 +94,7 @@ class Performance_Test():
         min_signup_time, max_signup_time, avg_signup_time = self.calculate_metrics(self.signup_times)
         min_room_time, max_room_time, avg_room_time = self.calculate_metrics(self.room_creation_times)
 
-        print("Performance Results for 500 PEERS at the same time:")
+        print(f'Performance Results for {numbers_of_peers} PEERS at the same time:')
         print("-" * 60)
         print("{:<30} {:<15}".format("Metric", "Time (seconds)"))
         print("-" * 60)
@@ -103,7 +104,7 @@ class Performance_Test():
         print("{:<30} {:<15}".format("Min Create Chatroom Time", min_room_time))
         print("{:<30} {:<15}".format("Max Create Chatroom Time", max_room_time))
         print("{:<30} {:<15}".format("Avg. Create Chatroom Time", avg_room_time))
-        print("{:<30} {:<15}".format("Total Execution Time From Signup to Joining Rooms (FOR ALL PEERS)s", total_time))
+        print("{:<30} {:<15}".format("Total Execution Time From Signup to Joining Rooms (FOR ALL PEERS)", total_time))
         print("-" * 60)
 
     def run_test(self, number_of_peers):
@@ -116,7 +117,8 @@ class Performance_Test():
         self.print_results(total_time)
 
 
-rooms_count = 100
+rooms_count = 10
 peers_per_room = 5
+numbers_of_peers = 10000
 tester = Performance_Test(rooms_count, peers_per_room)
-tester.run_test(500)
+tester.run_test(numbers_of_peers)
