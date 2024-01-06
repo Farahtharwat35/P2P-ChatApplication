@@ -2,6 +2,7 @@ import random
 import threading
 import time
 import Peer_test
+
 class Performance_Test():
     def __init__(self, rooms_count, peers_per_room):
         self.peers = []
@@ -11,36 +12,38 @@ class Performance_Test():
         self.signup_times = []
         self.room_creation_times = []
 
-    def signup_login(self, i):
-        start_time = time.time()
-        username = f"peer_{i}"
-        password = "password"
-        peer = Peer_test.peerMain
-        peer.createAccount(username, password)
-        port_number = peer.find_available_port(peer.registryName)
-        peer.login(username,password, port_number)
-        self.peers.append(peer)
-        end_time = time.time()
-        self.signup_times.append(end_time - start_time)
-        print(f'Peer{i} has signed up and joined successfully')
+    def signup_login(self, number_of_peers):
+        for i in range(number_of_peers):
+            start_time = time.time()
+            username = f"peer_{i}"
+            password = "password"
+            peer = Peer_test.peerMain
+            peer.createAccount(username, password)
+            port_number = peer.find_available_port(peer.registryName)
+            peer.login(username,password, port_number)
+            self.peers.append(peer)
+            end_time = time.time()
+            self.signup_times.append(end_time - start_time)
+            print(f'Peer{i} has signed up and joined successfully')
 
-    def create_chatroom(self, room_id):
-        start_time = time.time()
-        join_index = self.rooms_count * room_id
-        print(f'Join-index of {join_index}')
-        creator_peer = self.peers[join_index]
-        room_name = f'room_{room_id}'
-        response=creator_peer.Createchatroom(room_name)
-        if("created" in response):
-            self.rooms.append(room_name)
-            for peer_id in range(join_index, join_index + self.peers_per_room):
-                joiner_peer = self.peers[peer_id]
-                joiner_peer.joinRoom_test(room_name, "peer_" + str(peer_id), joiner_peer.registryName,
-                                   joiner_peer.peerServerPort, joiner_peer.peerUDPportnumber)
+    def create_chatroom(self):
+        for room_id in range(self.rooms_count):
+            start_time = time.time()
+            join_index = self.rooms_count * room_id
+            print(f'Join-index of {join_index}')
+            creator_peer = self.peers[join_index]
+            room_name = f'room_{room_id}'
+            response=creator_peer.Createchatroom(room_name)
+            if("created" in response):
+                self.rooms.append(room_name)
+                for peer_id in range(join_index, join_index + self.peers_per_room):
+                    joiner_peer = self.peers[peer_id]
+                    joiner_peer.joinRoom_test(room_name, "peer_" + str(peer_id), joiner_peer.registryName,
+                                       joiner_peer.peerServerPort, joiner_peer.peerUDPportnumber)
 
-                print(f'Peer{peer_id} has joined the room{room_name} successfully')
-        end_time = time.time()
-        self.room_creation_times.append(end_time - start_time)
+                    print(f'Peer{peer_id} has joined the room{room_name} successfully')
+            end_time = time.time()
+            self.room_creation_times.append(end_time - start_time)
     #100 peer
     # 10 rooms: 0-9 -- remaining = 90
     # 10 creators: peers 0-9
@@ -90,7 +93,7 @@ class Performance_Test():
         min_signup_time, max_signup_time, avg_signup_time = self.calculate_metrics(self.signup_times)
         min_room_time, max_room_time, avg_room_time = self.calculate_metrics(self.room_creation_times)
 
-        print("Performance Results:")
+        print("Performance Results for 500 PEERS at the same time:")
         print("-" * 60)
         print("{:<30} {:<15}".format("Metric", "Time (seconds)"))
         print("-" * 60)
@@ -100,20 +103,20 @@ class Performance_Test():
         print("{:<30} {:<15}".format("Min Create Chatroom Time", min_room_time))
         print("{:<30} {:<15}".format("Max Create Chatroom Time", max_room_time))
         print("{:<30} {:<15}".format("Avg. Create Chatroom Time", avg_room_time))
-        print("{:<30} {:<15}".format("Total Execution Time", total_time))
+        print("{:<30} {:<15}".format("Total Execution Time From Signup to Joining Rooms (FOR ALL PEERS)s", total_time))
         print("-" * 60)
 
     def run_test(self, number_of_peers):
         start_time = time.time()
-        self.run_parallel_signups(number_of_peers)
-        self.run_parallel_room_creation(self.rooms_count)
+        self.signup_login(number_of_peers)
+        self.create_chatroom()
         #self.send_messages()
         end_time = time.time()
         total_time = end_time - start_time
         self.print_results(total_time)
 
 
-rooms_count = 5
+rooms_count = 100
 peers_per_room = 5
 tester = Performance_Test(rooms_count, peers_per_room)
-tester.run_test(25)
+tester.run_test(500)
