@@ -4,7 +4,6 @@
 '''
 import asyncio
 import queue
-import re
 import socket
 import threading
 import select
@@ -12,6 +11,7 @@ import logging
 import db
 import bcrypt
 import pickle
+import re
 
 
 # This class is used to process the peer messages sent to registry
@@ -38,16 +38,16 @@ class ClientThread(threading.Thread):
     def run(self):
         # locks for thread which will be used for thread synchronization
         self.lock = threading.Lock()
-        print("Connection from: " + self.ip + ":" + str(self.port))
+        print("Connection from: " + self.ip + ":" + str(port))
         print("IP Connected: " + self.ip)
 
         while True:
             try:
                 # waits for incoming messages from peers
                 raw_data = self.tcpClientSocket.recv(1024).decode()
-                # Split messages using the delimiter '# '
+                # Split messages using the delimiter '# ' as tcp sockets does not preserve messages order so we have to delimit messages
+                #as to be able to identify them
                 messages = re.findall(r'#(.*?)#', raw_data)
-
                 # Add messages to the queue
                 for message in messages:
                     self.message_queue.put(message)
@@ -55,9 +55,7 @@ class ClientThread(threading.Thread):
                 # Process each message in the queue
                 while not self.message_queue.empty():
                     message = self.message_queue.get()
-                    message=message.split()
-                    print("----------------------Message------------------------ : " ,message)
-             #   logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message.encode))
+                    message = message.split()
                 #   JOIN    #
                 if(len(message)):
                     if message[0] == "JOIN":
@@ -98,9 +96,11 @@ class ClientThread(threading.Thread):
                             # peer is added to db with its username, port number, and ip address
                             if bcrypt.checkpw(message[2].encode('utf-8'), retrieved_hashed_pass.encode('utf-8')):
                                 self.username = message[1]
-
-                                tcpThreads[self.username] = self
-
+                                with self.lock:  # Acquire the lock before modifying shared data
+                                    try:
+                                        tcpThreads[self.username] = self
+                                    finally:
+                                        pass  # The lock is automatically released when the 'with' block is exited
                                 db.user_login(message[1], self.ip, message[3])
                                 # login-success is sent to peer,
                                 # and a udp server thread is created for this peer, and thread is started
@@ -111,7 +111,7 @@ class ClientThread(threading.Thread):
                                 self.tcpClientSocket.send(response.encode())
                                 self.udpServer = UDPServer(self.username, self.tcpClientSocket)
                                 self.udpServer.start()
-                                #self.udpServer.timer.start()
+                                self.udpServer.timer.start()
                             # if password not matches and then login-wrong-password response is sent
                             else:
                                 response = "login-wrong-password"
@@ -135,7 +135,7 @@ class ClientThread(threading.Thread):
                             print(self.ip + ":" + str(self.port) + " is logged out")
                             onlinePeers.remove(self.username)
                             self.tcpClientSocket.close()
-                            #self.udpServer.timer.cancel()
+                            self.udpServer.timer.cancel()
                             break
 
                     elif message[0] == "PRINT":
@@ -155,9 +155,7 @@ class ClientThread(threading.Thread):
                             self.tcpClientSocket.send(response_db.encode())
 
                     elif message[0] == "CREATE":
-                        print("MESSAGE[1]: " , message[1] , "MESSAGE[0]: " , message[0] )
                         response_db = db.save_chatroom(message[1])
-                        print("Response DB : " , response_db)
                         logging.info("Send to " + str(self.ip) + ":" + str(self.port) + " -> " + response_db)
                         self.tcpClientSocket.send(response_db.encode())
 
@@ -171,21 +169,22 @@ class ClientThread(threading.Thread):
                             response = "MEMBER-JOINED" + " " + message[2] + " " + message[3] + " " + message[5]
                             members_list = db.get_chatroom_members(message[1])
                             if ("not found" not in members_list):
-                                # members_list_bytes = pickle.dumps(members_list)
-                                # # Acquire lock before iterating through tcpThreads
-                                # for member in members_list:
-                                #     member_name = member["username"]
-                                #     if member_name in tcpThreads:
-                                #         if member_name != self.username:
-                                #             tcpThreads[member_name].tcpClientSocket.send(response.encode())
-                                #     else:
-                                #         print(f"Key '{member_name}' not found in tcpThreads.")
+                                members_list_bytes = pickle.dumps(members_list)
+                                # Acquire lock before iterating through tcpThreads
+                                with lock:
+                                    for member in members_list:
+                                        member_name = member["username"]
+                                        if member_name in tcpThreads:
+                                            if member_name != self.username:
+                                                tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                                        else:
+                                            print(f"Key '{member_name}' not found in tcpThreads.")
                                 # send to the new member the list of members too !
                                 # response = "You joined the room , start chatting !"
                                 # self.tcpClientSocket.send(response.encode())
                                 response_test=db.add_member(message[1], message[2], message[3], message[4], message[5])
                                 print("DB response for joining :" , response_test)
-                                # self.tcpClientSocket.sendall(members_list_bytes)
+                                self.tcpClientSocket.sendall(members_list_bytes)
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
 
                                 #db.add_member(message[1], message[2], message[3], message[4], message[5])
@@ -203,13 +202,13 @@ class ClientThread(threading.Thread):
                         response_peerleft = "YOU LEFT THE ROOM"
                         members_list = db.get_chatroom_members(message[2])
                         # Acquire lock before iterating over members_list
-
-                        for member in members_list:
-                            member_name = member["username"]
-                            if member_name != self.username:
-                                if member_name in tcpThreads:
-                                    tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_peerleft)
+                        with lock:
+                            for member in members_list:
+                                member_name = member["username"]
+                                if member_name != self.username:
+                                    if member_name in tcpThreads:
+                                        tcpThreads[member_name].tcpClientSocket.send(response_peers.encode())
+                                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response_peerleft)
                             self.tcpClientSocket.send(response_peerleft.encode())
 
                             db.leave_room(message[1], message[2])
@@ -238,20 +237,20 @@ class ClientThread(threading.Thread):
 
                     elif message[0] == "PORTNUMBER":
                        # Acquire the lock before accessing shared data
-
-                        if self.username in udpPortnumbers:
-                            udp_port = udpPortnumbers[self.username]
-                            self.tcpClientSocket.send(str(udp_port).encode())
-                        else:
-                            print(f"Username '{self.username}' not found in udpPortnumbers")
+                        with self.lock:
+                            if self.username in udpPortnumbers:
+                                udp_port = udpPortnumbers[self.username]
+                                self.tcpClientSocket.send(str(udp_port).encode())
+                            else:
+                                print(f"Username '{self.username}' not found in udpPortnumbers")
 
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr))
 
-    # # function for resetting the timeout for the udp timer thread
-    # def resetTimeout(self):
-    #     self.udpServer.resetTimer()
-    #
+    # function for resetting the timeout for the udp timer thread
+    def resetTimeout(self):
+        self.udpServer.resetTimer()
+
 
 
 # implementation of the udp server thread for clients
@@ -262,137 +261,135 @@ class UDPServer(threading.Thread):
         threading.Thread.__init__(self)
         self.username = username
         # timer thread for the udp server is initialized
-      #  self.timer = threading.Timer(80, self.waitHelloMessage)
+        self.timer = threading.Timer(80, self.waitHelloMessage)
         self.tcpClientSocket = clientSocket
         # Define a lock for thread safety
         self.lock = threading.Lock()
 
-    # def waitHelloMessage(self):
-    #     if self.username is not None:
-    #         with self.lock:  # Acquire the lock before accessing shared data
-    #             db.user_logout(self.username)
-    #             if self.username in tcpThreads:
-    #                 del tcpThreads[self.username]
-    #                 del udpPortnumbers[self.username]
-    #                 onlinePeers.remove(self.username)
-    #                 member_inroom, room_name = db.is_member_inroom(self.username)
-    #                 if room_name is not None:
-    #                     print(f'Removed {self.username} from chatroom: {room_name}')
-    #                     # Check if the chatroom exists before trying to get members
-    #                     is_room_exists, room_status = db.is_room_exits(room_name)
-    #                     if is_room_exists:
-    #                         members_list = db.get_chatroom_members(room_name)
-    #                         for member in members_list:
-    #                             member_name = member["username"]
-    #                             if member_name in tcpThreads:
-    #                                 if member_name != self.username:
-    #                                     response = f'{self.username} left the room due to disconnection'
-    #                                     tcpThreads[member_name].tcpClientSocket.send(response.encode())
-    #                         db.remove_member(self.username, room_name)
-    #                     else:
-    #                         print(f"Chatroom '{room_name}' does not exist.")
-    #         self.tcpClientSocket.close()
-    #         print("Removed " + self.username + " from online peers")
-    #     else:
-    #         print("Error: username or udpServer is not properly initialized.")
+    def waitHelloMessage(self):
+        if self.username is not None:
+            with self.lock:  # Acquire the lock before accessing shared data
+                db.user_logout(self.username)
+                if self.username in tcpThreads:
+                    del tcpThreads[self.username]
+                    del udpPortnumbers[self.username]
+                    onlinePeers.remove(self.username)
+                    member_inroom, room_name = db.is_member_inroom(self.username)
+                    if room_name is not None:
+                        print(f'Removed {self.username} from chatroom: {room_name}')
+                        # Check if the chatroom exists before trying to get members
+                        is_room_exists, room_status = db.is_room_exits(room_name)
+                        if is_room_exists:
+                            members_list = db.get_chatroom_members(room_name)
+                            for member in members_list:
+                                member_name = member["username"]
+                                if member_name in tcpThreads:
+                                    if member_name != self.username:
+                                        response = f'{self.username} left the room due to disconnection'
+                                        tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                            db.remove_member(self.username, room_name)
+                        else:
+                            print(f"Chatroom '{room_name}' does not exist.")
+            self.tcpClientSocket.close()
+            print("Removed " + self.username + " from online peers")
+        else:
+            print("Error: username or udpServer is not properly initialized.")
 
-    # #resets the timer for udp server
-    # def resetTimer(self):
-    #     self.timer.cancel()
-    #     self.timer = threading.Timer(30, self.waitHelloMessage)
-    #     self.timer.start()
+    # resets the timer for udp server
+    def resetTimer(self):
+        self.timer.cancel()
+        self.timer = threading.Timer(30, self.waitHelloMessage)
+        self.timer.start()
+
+
+# tcp and udp server port initializations
+print("\033[31mRegisty started...\033[0m")
+port = 15600
+portUDP = 15500
+
+# db initialization
+db = db.DB()
+
+# gets the ip address of this peer
+# first checks to get it for windows devices
+# if the device that runs this application is not windows
+# it checks to get it for macos devices
+hostname = socket.gethostname()
+try:
+    host = socket.gethostbyname(hostname)
+except socket.gaierror:
+    import netifaces as ni
+
+    host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
+
+print("\033[96mRegistry IP address:\033[0m " + host)
+print("\033[96mRegistry port number: \033[0m" + str(port))
 
 chatrooms = []
 # onlinePeers list for online account
 onlinePeers = []
+# accounts list for accounts
+accounts = []
 # tcpThreads list for online client's thread
 tcpThreads = {}
 # udp port number of each peer
 udpPortnumbers = {}
 
-db = db.DB()
+# tcp and udp socket initializations
+tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+tcpSocket.bind((host, port))
+udpSocket.bind((host, portUDP))
+tcpSocket.listen(5)
 db.delete_all_online_peers()
 db.delete_all_members()
 
-class ServerMain:
-    def __init__(self):
-        # tcp and udp server port initializations
-        print("\033[31mRegisty started...\033[0m")
-        self.port = 15600
-        self.portUDP = 15500
-        # db initialization
-        # gets the ip address of this peer
-        # first checks to get it for windows devices
-        # if the device that runs this application is not windows
-        # it checks to get it for macos devices
-        hostname = socket.gethostname()
-        try:
-            host = socket.gethostbyname(hostname)
-        except socket.gaierror:
-            import netifaces as ni
+# input sockets that are listened
+inputs = [tcpSocket, udpSocket]
 
-            host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
+# lock
+lock=threading.Lock()
 
-        print("\033[96mRegistry IP address:\033[0m " + host)
-        print("\033[96mRegistry port number: \033[0m" + str(self.port))
+# log file initialization
+logging.basicConfig(filename="registry.log", level=logging.INFO)
 
-        # tcp and udp socket initializations
-        tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        tcpSocket.bind((host, self.port))
-        udpSocket.bind((host, self.portUDP))
-        tcpSocket.listen(5)
-        db.delete_all_online_peers()
-        db.delete_all_members()
+# as long as at least a socket exists to listen registry runs
+while inputs:
 
-        # input sockets that are listened
-        inputs = [tcpSocket, udpSocket]
+    print("\033[92mListening for incoming connections...\033[0m")
+    # monitors for the incoming connections
+    readable, writable, exceptional = select.select(inputs, [], [])
+    for s in readable:
+        # if the message received comes to the tcp socket
+        # the connection is accepted and a thread is created for it, and that thread is started
+        if s is tcpSocket:
+            tcpClientSocket, addr = tcpSocket.accept()
+            newThread = ClientThread(addr[0], addr[1], tcpClientSocket)
+            newThread.start()
+        # if the message received comes to the udp socket
+        elif s is udpSocket:
+            # received the incoming udp message and parses it
+            message, clientAddress = s.recvfrom(1024)
+            message = message.decode().split()
+            print("UDP PORT IS:", clientAddress[1], "PORT NUMBER IS:", clientAddress[0])
 
-        # lock
-        lock=threading.Lock()
+            # checks if it is a hello message
+            if message[0] == "HELLO":
+                with lock:  # Acquire the lock before accessing shared data
+                    # checks if the account that this hello message is sent from is online
+                    if message[1] in tcpThreads:
+                        print("Hello is received from " + message[1])
+                        logging.info(
+                            "Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(
+                                message))
+                        # sending to the client its udp port which he sent from the message for future usage
+                        # Check if the username is already in udpPortnumbers
+                        if message[1] not in udpPortnumbers:
+                            udpPortnumbers[message[1]] = int(clientAddress[1])
+                            print("Peer port entered UDP : " , udpPortnumbers[message[1]])
+                        # resets the timeout for that peer since the hello message is received
+                        tcpThreads[message[1]].resetTimeout()
 
-        # log file initialization
-        logging.basicConfig(filename="registry.log", level=logging.INFO)
-
-        # as long as at least a socket exists to listen registry runs
-        while inputs:
-
-            print("\033[92mListening for incoming connections...\033[0m")
-            # monitors for the incoming connections
-            readable, writable, exceptional = select.select(inputs, [], [])
-            for s in readable:
-                # if the message received comes to the tcp socket
-                # the connection is accepted and a thread is created for it, and that thread is started
-                if s is tcpSocket:
-                    tcpClientSocket, addr = tcpSocket.accept()
-                    newThread = ClientThread(addr[0], addr[1], tcpClientSocket)
-                    newThread.start()
-                # if the message received comes to the udp socket
-                elif s is udpSocket:
-                    # received the incoming udp message and parses it
-                    message, clientAddress = s.recvfrom(1024)
-                    message = message.decode().split()
-                    print("UDP PORT IS:", clientAddress[1], "PORT NUMBER IS:", clientAddress[0])
-
-                    # checks if it is a hello message
-                    if message[0] == "HELLO":
-                        with lock:  # Acquire the lock before accessing shared data
-                            # checks if the account that this hello message is sent from is online
-                            if message[1] in tcpThreads:
-                                print("Hello is received from " + message[1])
-                                logging.info(
-                                    "Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(
-                                        message))
-                                # sending to the client its udp port which he sent from the message for future usage
-                                # Check if the username is already in udpPortnumbers
-                                if message[1] not in udpPortnumbers:
-                                    udpPortnumbers[message[1]] = int(clientAddress[1])
-                                    print("Peer port entered UDP : " , udpPortnumbers[message[1]])
-                                # resets the timeout for that peer since the hello message is received
-                                tcpThreads[message[1]].resetTimeout()
-
-        # registry tcp socket is closed
-        tcpSocket.close()
-        udpSocket.close()
-
-Server = ServerMain()
+# registry tcp socket is closed
+tcpSocket.close()
+udpSocket.close()
