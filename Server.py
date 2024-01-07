@@ -130,6 +130,7 @@ class ClientThread(threading.Thread):
                             try:
                                 if message[1] in tcpThreads:
                                     del tcpThreads[message[1]]
+                                    print("Removed " + self.username + " from online peers")
                             finally:
                                 self.lock.release()
                             print(self.ip + ":" + str(self.port) + " is logged out")
@@ -403,7 +404,7 @@ logging.basicConfig(filename="registry.log", level=logging.INFO)
 # as long as at least a socket exists to listen registry runs
 while inputs:
 
-    print("\033[92mListening for incoming connections...\033[0m")
+    print("\n\033[92mListening for incoming connections...\033[0m")
     # monitors for the incoming connections
     readable, writable, exceptional = select.select(inputs, [], [])
     for s in readable:

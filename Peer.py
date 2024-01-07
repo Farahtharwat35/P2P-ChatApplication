@@ -285,7 +285,8 @@ class peerMain:
     def __init__(self):
         # ip address of the registry
         
-        self.registryName = input("\033[92mEnter IP address of registry: \033[0m")
+        self.registryName = socket.gethostbyname(socket.gethostname()) #input("\033[92mEnter IP address of registry: \033[0m")
+
         # self.registryName = 'localhost'
         # port number of the registry
         self.registryPort = 15600
@@ -313,7 +314,6 @@ class peerMain:
         self.list_of_members= []
         # Register cleanup function with atexit
         atexit.register(self.cleanup)
-
 
         choice = "0"
         # log file initialization
@@ -391,7 +391,7 @@ class peerMain:
                     self.joinRoom(room_name, self.loginCredentials[0], self.peerServer.peerServerHostname,
                                   self.peerServerPort, self.peerUDPportnumber)
 
-            elif choice == "8" and self.isOnline:
+            elif choice == "8"  and self.isOnline:
                 response=self.get_chatrooms()
                 if("NO" not in response):
                     room_names=response.split(":")[1].split()
@@ -405,25 +405,30 @@ class peerMain:
                 else :
                     print(response)
 
-            elif choice == "10" and self.isOnline:
+            elif choice == "9" and self.isOnline:
                 self.print_ChatRooms()
 
             # if choice is 5 and user is online, then user is asked
             # to enter the username of the user that is wanted to be chatted
-            elif choice == "5" and self.isOnline:
-                username = input("Enter the username of user to start chat:")
-                if self.loginCredentials[0] == username:
-                    print("YOU CANNOT CHAT WITH YOURSELF !")
-                else:
+            elif (choice == "5" or choice == "4" ) and self.isOnline:
+                if choice == "5":
+                    username = input("Enter the username of peer to start chat:")
+                    if self.loginCredentials[0] == username:
+                        print("YOU CANNOT CHAT WITH YOURSELF !")
+                    else:
+                        searchStatus = self.searchUser(username)
+                        # if searched user is found, then its ip address and port number is retrieved
+                        # and a client thread is created
+                        # main process waits for the client thread to finish its chat
+                        if searchStatus != None and searchStatus!=0:
+                            searchStatus = searchStatus.split(":")
+                            if (choice == "5"):
+                                self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],self.peerServer, None)
+                                self.peerClient.start()
+                                self.peerClient.join()
+                else :
+                    username = input("Enter the username of peer you want to search for if he exists :")
                     searchStatus = self.searchUser(username)
-                    # if searched user is found, then its ip address and port number is retrieved
-                    # and a client thread is created
-                    # main process waits for the client thread to finish its chat
-                    if searchStatus != None and searchStatus!=0:
-                        searchStatus = searchStatus.split(":")
-                        self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0],self.peerServer, None)
-                        self.peerClient.start()
-                        self.peerClient.join()
 
             # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
             # that's why response is evaluated in main process not the server thread even though the prompt is printed by server
@@ -652,7 +657,7 @@ class peerMain:
     # function for sending hello message
     # a timer thread is used to send hello messages to udp socket of registry
     def sendHelloMessage(self):
-        message = "HELLO " + self.loginCredentials[0]
+        message = "HELLO " + " " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(20, self.sendHelloMessage)
