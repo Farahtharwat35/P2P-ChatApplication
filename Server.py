@@ -295,6 +295,53 @@ class UDPServer(threading.Thread):
         else:
             print("Error: username or udpServer is not properly initialized.")
 
+    def resetTimeout(self):
+        self.udpServer.resetTimer()
+
+
+
+# implementation of the udp server thread for clients
+class UDPServer(threading.Thread):
+
+    # udp server thread initializations
+    def __init__(self, username, clientSocket):
+        threading.Thread.__init__(self)
+        self.username = username
+        # timer thread for the udp server is initialized
+        self.timer = threading.Timer(80, self.waitHelloMessage)
+        self.tcpClientSocket = clientSocket
+        # Define a lock for thread safety
+        self.lock = threading.Lock()
+
+    def waitHelloMessage(self):
+        if self.username is not None:
+            with self.lock:  # Acquire the lock before accessing shared data
+                db.user_logout(self.username)
+                if self.username in tcpThreads:
+                    del tcpThreads[self.username]
+                    del udpPortnumbers[self.username]
+                    onlinePeers.remove(self.username)
+                    member_inroom, room_name = db.is_member_inroom(self.username)
+                    if room_name is not None:
+                        print(f'Removed {self.username} from chatroom: {room_name}')
+                        # Check if the chatroom exists before trying to get members
+                        is_room_exists, room_status = db.is_room_exits(room_name)
+                        if is_room_exists:
+                            members_list = db.get_chatroom_members(room_name)
+                            for member in members_list:
+                                member_name = member["username"]
+                                if member_name in tcpThreads:
+                                    if member_name != self.username:
+                                        response = f'{self.username} left the room due to disconnection'
+                                        tcpThreads[member_name].tcpClientSocket.send(response.encode())
+                            db.remove_member(self.username, room_name)
+                        else:
+                            print(f"Chatroom '{room_name}' does not exist.")
+            self.tcpClientSocket.close()
+            print("Removed " + self.username + " from online peers")
+        else:
+            print("Error: username or udpServer is not properly initialized.")
+
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
@@ -389,6 +436,7 @@ while inputs:
                             print("Peer port entered UDP : " , udpPortnumbers[message[1]])
                         # resets the timeout for that peer since the hello message is received
                         tcpThreads[message[1]].resetTimeout()
+
 
 # registry tcp socket is closed
 tcpSocket.close()
