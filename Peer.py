@@ -353,8 +353,6 @@ class peerMain:
                     self.peerServer.start()
                     # hello message is sent to registry
                     hello = self.sendHelloMessage()
-                    if( "done" in hello):
-                        self.set_udp_peer_portnumber()
             # if choice is 3 and user is logged in, then user is logged out
             # and peer variables are set, and server and client sockets are closed
             elif choice == "3" and self.isOnline:
@@ -402,6 +400,8 @@ class peerMain:
                     room_name = input("room name: ")
                     if(room_name in room_names):
                         self.joinRoom(room_name,self.loginCredentials[0],self.peerServer.peerServerHostname ,self.peerServerPort,self.peerUDPportnumber)
+                    else :
+                        print("CHOOSE A VALID ROOM NAME !")
                 else :
                     print(response)
 
@@ -660,9 +660,14 @@ class peerMain:
         message = "HELLO " + " " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
+        # Wait for acknowledgment from the server
+        ack, server_address = self.udpClientSocket.recvfrom(1024)
+        if ack.decode() == "HELLO_ACK":
+            self.set_udp_peer_portnumber()
+
         self.timer = threading.Timer(20, self.sendHelloMessage)
         self.timer.start()
-        return "done"
+        # return "done"
 
     def set_udp_peer_portnumber(self):
         message = "#" + "PORTNUMBER" + "#"

@@ -437,7 +437,8 @@ while inputs:
                             print("Peer port entered UDP : " , udpPortnumbers[message[1]])
                         # resets the timeout for that peer since the hello message is received
                         tcpThreads[message[1]].resetTimeout()
-
+                        # Send acknowledgment to the client
+                        s.sendto("HELLO_ACK".encode(), clientAddress)
 
 # registry tcp socket is closed
 tcpSocket.close()
